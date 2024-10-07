@@ -1,0 +1,27 @@
+.root {
+    @apply inline-flex items-center justify-center font-medium cursor-pointer leading-5 transition-colors duration-150 px-3 py-3 rounded-lg;
+}
+
+.primary {
+    @apply bg-blue-600  text-white hover:bg-blue-500;
+}
+
+.secondary {
+    @apply bg-white text-blue-600 hover:text-blue-500;
+}
+
+.sizemd {
+    @apply text-base px-5 py-3.5;
+}
+
+.sizelg {
+    @apply text-xl px-6 py-5;
+}
+
+.sizexl {
+    @apply text-xl px-7 py-6
+}
+
+.fullWidth {
+    @apply w-full;
+}

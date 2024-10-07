@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import {Navbar} from "@/components";
+import s from './global.module.css'
+import { PersonFillIcon,SignOutIcon } from '@primer/octicons-react'
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -28,7 +31,26 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <main className={s.background}>
+        <Navbar/>
+        <div className={s.container}>
+          <header className={s.header}>
+            <h1 className={s.h1}>Clientes</h1>
+            <div className={s.contentUser}>
+              <div>
+                <PersonFillIcon size={24} />
+                <span>Noé Aviles</span>
+              </div>
+              <div>
+                <SignOutIcon size={24} className={s.iconSinOut} />
+              </div>
+            </div>
+          </header>
+          <main className={s.main}>
+          {children}
+          </main>
+        </div>
+        </main>
       </body>
     </html>
   );

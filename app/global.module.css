@@ -1,0 +1,24 @@
+.background {
+    @apply bg-slate-100 flex h-screen;
+}
+
+.container {
+    @apply flex flex-col items-center  w-full p-6;
+}
+
+.header {
+    @apply flex justify-between w-full mb-2 px-5;
+}
+.h1 {
+  @apply text-2xl;
+}
+.contentUser {
+  @apply flex items-center;
+}
+.iconSinOut {
+  @apply text-red-500 ml-3;
+}
+
+.main {
+    @apply w-full bg-white min-h-96 rounded-md shadow-lg p-5; 
+}
