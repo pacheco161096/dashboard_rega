@@ -2,7 +2,7 @@
 
 import { useState,useEffect, useCallback } from "react";
 
-import { Button, Modal, SearchBox, Table } from "@/components";
+import { Button, Modal, SearchBox, Table,UpdateCustomer } from "@/components";
 
 import axios from 'axios';
 
@@ -12,8 +12,9 @@ export default function Customers() {
   
 const [isActive, setIsActive] = useState(false)
 const [updateCliente,setUpdateCliente] = useState([])
+const [isNewCliente,setIsNewCliente] = useState(false)
 
-  const URL=("https://monkfish-app-2et8k.ondigitalocean.app/api/users/")
+  const URL=("https://monkfish-app-2et8k.ondigitalocean.app/api/users?populate=*")
   const [data, setData] = useState([]);
   const [filterData, setFilterData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -35,20 +36,24 @@ const [updateCliente,setUpdateCliente] = useState([])
     }
   };
 
-  const handleUpdateCliente = (data:[]) => {
-    setUpdateCliente(data)
-    setIsActive(!isActive)
-}
-
 const handleModal = useCallback( () => {
   setIsActive(!isActive)
-  setUpdateCliente([])
 },[isActive])
 
+const handleNewCliente = useCallback( () => {
+  setIsNewCliente(true)
+  setUpdateCliente([])
+  setIsActive(!isActive)
+},[isActive])
+
+const handleUpdateCliente = useCallback( (data:[]) => {
+  setUpdateCliente(data)
+  setIsNewCliente(false)
+  setIsActive(!isActive)
+},[isActive])
 
 const handleFilter = useCallback( (item:string) => {
-  console.log(data)
-    const user = data.filter((a) => a.id === parseInt(item) ||  a.nombre === item)
+    const user = data.filter((a) => a.id === parseInt(item) ||  a.nombre === item || a.email === item)
     if (JSON.stringify(user) !== JSON.stringify(data) && user.length > 0) {
       setFilterData(user);
     }
@@ -62,12 +67,12 @@ const handleFilter = useCallback( (item:string) => {
       {
         isActive == true && 
         <Modal handleModal={handleModal}>
-          {updateCliente  ?   <div>Updates clientes</div> : <div>Crear clientes</div>}  
+          {isNewCliente ? <div>Crear clientes</div> : <UpdateCustomer data={updateCliente}/>}  
         </Modal>
       }
 
         <div className={s.header}> 
-          <Button onClick={handleModal} variant="primary" size="md">Nuevo Cliente</Button>
+          <Button onClick={handleNewCliente} variant="primary" size="md">Nuevo Cliente</Button>
           <SearchBox handleFilter={handleFilter} />
         </div>
 

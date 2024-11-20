@@ -11,6 +11,7 @@ export const SearchBox:FC<SearchBoxProps> = (props) => {
   const {handleFilter} = props
 
   const handleOnchange = (event) => {
+    console.log(event.target.value)
     handleFilter(event.target.value)
   }
 

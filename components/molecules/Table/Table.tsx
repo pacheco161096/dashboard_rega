@@ -61,7 +61,7 @@ export const Table:FC<TableProps> = (props) => {
                   <span className={ `inline-flex px-2 text-xs font-medium leading-5 rounded-full  ${ item.estatus_servicio === true ? 'text-green-700  bg-green-100' : 'text-red-100 bg-red-700'}` }> { item.estatus_servicio == true ? "Activo" : "Suspendido" } </span>
                 </td>
                 <td className={s.td}>
-                  <span onClick={() => handleUpdateCliente(item)} className="text-sm text-center cursor-pointer"> <i className="fa-duotone fa-pen-to-square text-yellow-300 text-2xl"></i> </span>
+                  <span onClick={() => handleUpdateCliente(item)} className="text-sm text-center cursor-pointer"> <i className="fa-duotone fa-pen-to-square text-yellow-300 text-2xl"></i>edit </span>
                 </td>
             </tr>
               ) )
