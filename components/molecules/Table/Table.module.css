@@ -29,3 +29,7 @@
  .btnEdit {
   @apply flex justify-center w-10 cursor-pointer bg-yellow-400 p-1 rounded-md;  
  }
+
+ .btnPay {
+  @apply flex justify-center w-10 cursor-pointer bg-blue-800 p-1 rounded-md;  
+ }

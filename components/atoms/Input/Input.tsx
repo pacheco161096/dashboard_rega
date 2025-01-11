@@ -8,6 +8,7 @@ export interface InputProps {
   type: string;
   valor?: string;
   label?: string;
+  isEdited?: boolean;
   defaultValue?: string;
   size: string;
   errorMessageEmpty?: string;
@@ -15,7 +16,7 @@ export interface InputProps {
 }
 
 export const Input: FC<InputProps> = (props) => {
-  const { nombre, funcion, placeHolder, requerido, type, valor } = props;
+  const { nombre, funcion, placeHolder, requerido, type, valor, isEdited = false } = props;
 
   return (
     <div className="inputContainer relative">
@@ -27,6 +28,7 @@ export const Input: FC<InputProps> = (props) => {
         required={requerido}
         value={valor}
         onChange={(e) => funcion(nombre, e.target.value)}
+        disabled={isEdited}
       />
       <label
         htmlFor={nombre}

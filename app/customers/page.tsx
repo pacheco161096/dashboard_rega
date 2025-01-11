@@ -1,20 +1,21 @@
 'use client'
 
-import { useState,useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 
-import { Button, Modal, SearchBox, Table,CreateCustomer,UpdateCustomer } from "@/components";
+import { Button, Modal, SearchBox, Table, CreateCustomer, UpdateCustomer, RegisterPay } from "@/components";
 
 import axios from 'axios';
 
 import s from './customers.module.css'
 
 export default function Customers() {
-  
-const [isActive, setIsActive] = useState(false)
-const [updateCliente,setUpdateCliente] = useState([])
-const [isNewCliente,setIsNewCliente] = useState(false)
 
-  const URL=("https://monkfish-app-2et8k.ondigitalocean.app/api/users?populate=*")
+  const [showModalClient, setShowModalClient] = useState(false)
+  const [showModalPay, setShowModalPay] = useState(false)
+  const [updateCliente, setUpdateCliente] = useState([])
+  const [isNewCliente, setIsNewCliente] = useState(false)
+
+  const URL = ("https://monkfish-app-2et8k.ondigitalocean.app/api/users?populate=*")
   const [data, setData] = useState([]);
   const [filterData, setFilterData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -22,7 +23,7 @@ const [isNewCliente,setIsNewCliente] = useState(false)
   useEffect(() => {
     fetchData();
     setLoading(false);
-  }, [isActive]);
+  }, [showModalClient]);
 
   const fetchData = async () => {
     setLoading(true)
@@ -36,48 +37,69 @@ const [isNewCliente,setIsNewCliente] = useState(false)
     }
   };
 
-const handleModal = useCallback( () => {
-  setIsActive(!isActive)
-},[isActive])
+  /* Clientes */
 
-const handleNewCliente = useCallback( () => {
-  setIsNewCliente(true)
-  setUpdateCliente([])
-  setIsActive(!isActive)
-},[isActive])
+  const handleModalClient = useCallback(() => {
+    setShowModalClient(!showModalClient)
+  }, [showModalClient])
 
-const handleUpdateCliente = useCallback( (data:[]) => {
-  setUpdateCliente(data)
-  setIsNewCliente(false)
-  setIsActive(!isActive)
-},[isActive])
+  const handleNewCliente = useCallback(() => {
+    setIsNewCliente(true)
+    setUpdateCliente([])
+    setShowModalClient(!showModalClient)
+  }, [showModalClient])
 
-const handleFilter = useCallback( (item:string) => {
-    const user = data.filter((a) => a.id === parseInt(item) ||  a.nombre === item || a.email === item)
+  const handleUpdateCliente = useCallback((data: []) => {
+    setUpdateCliente(data)
+    setIsNewCliente(false)
+    setShowModalClient(!showModalClient)
+  }, [showModalClient])
+
+  /* Pagos */
+
+  const handleModalPay = useCallback(() => {
+    setShowModalPay(!showModalPay)
+  }, [showModalPay]);
+
+  const handleRegisterPay = useCallback((user: any) => {
+    setUpdateCliente(user);
+    setShowModalPay(!showModalPay)
+  }, [showModalPay])
+
+  const handleFilter = useCallback((item: string) => {
+    const user = data.filter((a) => a.id === parseInt(item) || a.nombre === item || a.email === item)
     if (JSON.stringify(user) !== JSON.stringify(data) && user.length > 0) {
       setFilterData(user);
     }
-    if(user.length === 0) {
+    if (user.length === 0) {
       setFilterData([]);
     }
-},[data])
+  }, [data])
 
   return (
     <div className="">
       {
-        isActive == true && 
-        <Modal handleModal={handleModal}>
-          {isNewCliente ? <CreateCustomer handleModal={handleModal}/> : <UpdateCustomer data={updateCliente}/>}  
+        showModalClient == true &&
+        <Modal handleModal={handleModalClient}>
+          {isNewCliente ? <CreateCustomer handleModal={handleModalClient} /> : <UpdateCustomer data={updateCliente} />}
         </Modal>
       }
 
-        <div className={s.header}> 
-          <Button onClick={handleNewCliente} variant="primary" size="md">Nuevo Cliente</Button>
-          <SearchBox handleFilter={handleFilter} />
-        </div>
+      {
+        showModalPay &&
+        <Modal handleModal={handleModalPay}>
+          <RegisterPay handleModal={handleModalPay} selectedUser={ updateCliente } />
+        </Modal>
+      }
+
+
+      <div className={s.header}>
+        <Button onClick={handleNewCliente} variant="primary" size="md">Nuevo Cliente</Button>
+        <SearchBox handleFilter={handleFilter} />
+      </div>
 
       {
-        loading ? <span>Cargandoo..</span> :  <Table data={filterData.length > 0 ? filterData : data} handleUpdateCliente={handleUpdateCliente} />
+        loading ? <span>Cargandoo..</span> : <Table data={filterData.length > 0 ? filterData : data} handleUpdateCliente={handleUpdateCliente} handleRegisterPay={handleRegisterPay} />
       }
     </div>
   );

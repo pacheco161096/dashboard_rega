@@ -1,14 +1,18 @@
 import { FC } from "react"
 
-import {  PencilIcon } from '@primer/octicons-react'
+import {  CreditCardIcon, PencilIcon } from '@primer/octicons-react'
 
 import s from './Table.module.css'
 
 interface TableProps {
   data:[itemProps]
   handleUpdateCliente:() => itemProps
+  handleRegisterPay:() => itemPay
 } 
 
+export interface itemPay {
+  id: string;
+}
 export interface itemProps {
   id:string
   nombre:string
@@ -20,7 +24,8 @@ export interface itemProps {
 }
 
 export const Table:FC<TableProps> = (props) => {
-  const {data,handleUpdateCliente} = props
+  const { data, handleUpdateCliente, handleRegisterPay } = props;
+
   return (
     <div className={s.container}>
       <div className={s.contenTable}>
@@ -34,6 +39,7 @@ export const Table:FC<TableProps> = (props) => {
               <td className="px-4 py-3 font-bold">Localidad</td>
               <td className="px-4 py-3 font-bold">Tipo de servicio</td>
               <td className="px-4 py-3 font-bold">Status</td>
+              <td className="px-4 py-3 font-bold">Pagar</td>
               <td className="px-4 py-3 font-bold">Editar</td>
             </tr>
           </thead>
@@ -61,6 +67,9 @@ export const Table:FC<TableProps> = (props) => {
                 </td>
                 <td className={s.td}>
                   <span className={ `inline-flex px-2 text-xs font-medium leading-5 rounded-full  ${ item.estatus_servicio === true ? 'text-green-700  bg-green-100' : 'text-red-100 bg-red-700'}` }> { item.estatus_servicio == true ? "Activo" : "Suspendido" } </span>
+                </td>
+                <td className={s.td}>
+                  <span onClick={() => handleRegisterPay(item)} className={s.btnPay}> <CreditCardIcon size={24} fill="#ffffff" /> </span>
                 </td>
                 <td className={s.td}>
                   <span onClick={() => handleUpdateCliente(item)} className={s.btnEdit}> <PencilIcon size={24} fill="#ffffff" /> </span>

@@ -7,7 +7,7 @@ import s from './UpdateCustomer.module.css'
 import { Input } from "@/components/atoms/Input/Input"
 
 export interface UpdateCustomerProps {
-data?:[]
+  data: any[]
 }
 
 export const UpdateCustomer:FC<UpdateCustomerProps> = (props) => {
