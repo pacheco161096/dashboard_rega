@@ -1,21 +1,31 @@
 .container {
     @apply w-full overflow-hidden mt-10;
 }
+
 .contentTable {
     @apply w-full overflow-x-auto;
 }
+
 .table {
     @apply w-full whitespace-nowrap;
 }
+
 .thead {
     @apply text-xs font-semibold tracking-wide text-left text-gray-500 uppercase border-b  bg-gray-50;
 }
+
 .tbody {
   @apply divide-y  text-gray-700;
  }
+
  .td {
   @apply px-4 py-3;
  }
+
  .span {
   @apply text-sm;
+ }
+
+ .btnEdit {
+  @apply flex justify-center w-10 cursor-pointer bg-yellow-400 p-1 rounded-md;  
  }

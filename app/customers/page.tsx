@@ -2,7 +2,7 @@
 
 import { useState,useEffect, useCallback } from "react";
 
-import { Button, Modal, SearchBox, Table,UpdateCustomer } from "@/components";
+import { Button, Modal, SearchBox, Table,CreateCustomer,UpdateCustomer } from "@/components";
 
 import axios from 'axios';
 
@@ -67,7 +67,7 @@ const handleFilter = useCallback( (item:string) => {
       {
         isActive == true && 
         <Modal handleModal={handleModal}>
-          {isNewCliente ? <div>Crear clientes</div> : <UpdateCustomer data={updateCliente}/>}  
+          {isNewCliente ? <CreateCustomer handleModal={handleModal}/> : <UpdateCustomer data={updateCliente}/>}  
         </Modal>
       }
 

@@ -1,0 +1,9 @@
+.container {
+    @apply p-1;
+}
+.h5 {
+    @apply mb-5 w-full text-2xl;
+}
+.form {
+    @apply grid grid-cols-2 gap-5;
+}

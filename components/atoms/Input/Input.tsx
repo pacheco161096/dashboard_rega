@@ -1,38 +1,39 @@
-import {FC} from 'react'
+import { FC } from "react";
 
 export interface InputProps {
-    key:number
-    name:string
-    required:boolean,
-    placeHolder:string,
-    type:string
-    value?:string
-    label?:string
-    defaultValue?:string
-    size:string
-    errorMessageEmpty?:string
+  key: number;
+  nombre: string;
+  requerido: boolean;
+  placeHolder?: string;
+  type: string;
+  valor?: string;
+  label?: string;
+  defaultValue?: string;
+  size: string;
+  errorMessageEmpty?: string;
+  funcion: () => void;
 }
 
-export const Input:FC<InputProps> = (props) => {
-
-    const {name,required,placeHolder,type,value,label} = props
-
-    const handleOnchange = (e) => {
-       return e.target.value
-      }
+export const Input: FC<InputProps> = (props) => {
+  const { nombre, funcion, placeHolder, requerido, type, valor } = props;
 
   return (
     <div className="inputContainer relative">
-    <input type={type} 
-      className="peer h-12 w-full rounded-lg  ring-1 px-2 ring-gray-300 focus:ring-blue-600 focus:outline-none focus:border-blue-600" 
-      name={name}
-      placeholder={ placeHolder }
-      required={required}
-      value={value}
-      onChange={handleOnchange}
+      <input
+        type={type}
+        className="peer h-12 w-full rounded-lg  ring-1 px-2 ring-gray-300 focus:ring-blue-600 focus:outline-none focus:border-blue-600"
+        name={nombre}
+        placeholder={placeHolder}
+        required={requerido}
+        value={valor}
+        onChange={(e) => funcion(nombre, e.target.value)}
       />
-      <label htmlFor={label} className="absolute cursor-text left-0 -top-3 text-sm text-gray-400 mx-1 px-1 peer-placeholder-shown:-z-10 peer-placeholder-shown:text-base peer-placeholder-shown:text-[#6f6d74] peer-placeholder-shown:top-3 peer-focus:z-10 peer-focus:-top-3 bg-[#ffffff]">{label}</label>
-  </div>
-  )
-}
-
+      <label
+        htmlFor={nombre}
+        className="absolute cursor-text left-0 -top-3 text-sm text-gray-400 mx-1 px-1 peer-placeholder-shown:-z-10 peer-placeholder-shown:text-base peer-placeholder-shown:text-[#6f6d74] peer-placeholder-shown:top-3 peer-focus:z-10 peer-focus:-top-3 bg-[#ffffff]"
+      >
+        {nombre}
+      </label>
+    </div>
+  );
+};
