@@ -10,7 +10,7 @@ export interface InputProps {
   label?: string;
   isEdited?: boolean;
   defaultValue?: string;
-  size: string;
+  size?: string;
   errorMessageEmpty?: string;
   funcion: () => void;
 }

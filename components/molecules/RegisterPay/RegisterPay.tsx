@@ -24,7 +24,7 @@ export interface itemPay {
 export const RegisterPay: FC<RegisterPayProps> = (props) => {
   const { handleModal, selectedUser } = props;
 
-  console.log('*** selectedUser ', selectedUser);
+  const { Facturas }: any = selectedUser;
   
   const handleSubmit = (event: any) => {
     /* event.preventDefault();
@@ -93,13 +93,13 @@ export const RegisterPay: FC<RegisterPayProps> = (props) => {
         className="w-full p-5 flex flex-col items-center"
         onSubmit={handleSubmit}
       >
-        <h2 className=" text-3xl mb-5 text-center">Registrar Pago</h2>
-        <div className=" grid grid-cols-2 gap-4 w-full">
+        <h2 className="text-3xl mb-5 text-center">Registrar Pago</h2>
+        <div className="grid grid-cols-2 gap-4 w-full">
           {dataInput?.map((item, i) => (
             <Input
               key={i}
               nombre={item.name}
-              funcion={handleInput}
+              funcion={() => handleInput}
               valor={''}
               requerido={item.requerid}
               placeHolder={item.placeHolder}
@@ -108,6 +108,22 @@ export const RegisterPay: FC<RegisterPayProps> = (props) => {
             />
           ))}
         </div>
+        <ul>
+          {
+            Facturas.map((factura, i) => (
+              <li className="">
+                <Input
+                  funcion={ () => console.log('factura ', factura, i) }
+                  key={ i }
+                  nombre={ factura.fecha }
+                  type="checkbox"
+                  valor={ factura.pagado }
+                  requerido={ false }
+                />
+              </li>
+            ))
+          }
+        </ul>
         <input
           type="submit"
           value="Guardar"
