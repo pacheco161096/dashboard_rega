@@ -1,6 +1,6 @@
 "use client";
 
-import { FC, useCallback, useState } from "react";
+import { FC, useCallback, useEffect, useState } from "react";
 
 import s from "./RegisterPay.module.css";
 
@@ -13,25 +13,27 @@ export interface RegisterPayProps {
   handleModal: () => void;
 }
 
-/* 
-export interface itemPay {
+interface Factura {
   id: string;
-  typePay: string;
-  totalPay: number;
+  fecha: string;
+  pagado: boolean;
+  total: number; // Agregar a las facturas esta propiedad
 }
-*/
 
 export const RegisterPay: FC<RegisterPayProps> = (props) => {
   const { handleModal, selectedUser } = props;
+  const { Facturas }: any = selectedUser;
 
-  console.log('*** selectedUser ', selectedUser);
-  
+  const [checkedFacturas, setCheckedFacturas]: any = useState({});
+  const [facturasToPay, setFacturasToPay] = useState([]);
+  const [totalToPay, setTotalToPay] = useState(0);
+
+  console.log("selectUser:", selectedUser);
+
   const handleSubmit = (event: any) => {
-    /* event.preventDefault();
-    UsePostData(
-      "https://monkfish-app-2et8k.ondigitalocean.app/api/auth/local/register",
-      dataUser
-    ); */
+    event.preventDefault();
+    console.log("Facturas a pagar:", facturasToPay);
+    console.log("Total a pagar:", totalToPay);
     handleModal();
   };
 
@@ -39,68 +41,75 @@ export const RegisterPay: FC<RegisterPayProps> = (props) => {
     name: string | boolean | number | symbol | any,
     value: string | boolean | number | symbol | any
   ) => {
-    /* if (name === "email") {
-      setdataUser((dataUser.username = value));
-    }
-    setdataUser({ ...dataUser, [name]: value }); */
   };
 
   const dataInput = [
     {
-      name: "name",
+      name: selectedUser?.nombre,
       requerid: true,
       placeHolder: "Nombre",
       type: "text",
-      disableField: true
+      disableField: true,
     },
     {
-      name: "lastName",
+      name: selectedUser?.apellido,
       requerid: true,
       placeHolder: "Apellido",
       type: "text",
-      disableField: true
+      disableField: true,
     },
     {
-      name: "typePackage",
+      name: selectedUser?.tipo_servicio_paquete,
       requerid: false,
       placeHolder: "Paquete",
       type: "text",
-      disableField: true
+      disableField: true,
     },
     {
-      name: "contractNum",
+      name: selectedUser?.id,
       requerid: false,
       placeHolder: "No. Contrato",
       type: "text",
-      disableField: true
+      disableField: true,
     },
   ];
-  /* Agregar tabla de facturas -Check y Fecha - Total con autoSuma */
 
-  const UsePostData = async (url: string, data: []) => {
-    try {
-      const response = await axios.post(url, data);
-      console.log(response.data); // Procesar la respuesta exitosa
-    } catch (error) {
-      console.error(error); // Manejar el error
-    }
+  const handleCheckboxChange = (factura: any) => {
+    setCheckedFacturas({
+      ...checkedFacturas,
+      [factura.id]: !checkedFacturas[factura.id],
+    });
   };
+
+  useEffect(() => {
+    const selected: any = Object.keys(checkedFacturas)
+      .filter((key) => checkedFacturas[key])
+      .map((key) => Facturas.find((f:any) => f.id === key));
+
+    setFacturasToPay(selected.filter(Boolean));
+  }, [checkedFacturas, Facturas]);
+
+  useEffect(() => {
+    const newTotal = facturasToPay.reduce((sum, factura) => sum + factura.total, 0); // Que factura tenga el total en el objeto
+    setTotalToPay(newTotal);
+  }, [facturasToPay]);
+
 
   return (
     <div className={s.container}>
       <form
         action=""
-        className="w-full p-5 flex flex-col items-center"
+        className={`${ s.form } w-full p-5 flex flex-col items-center`}
         onSubmit={handleSubmit}
       >
-        <h2 className=" text-3xl mb-5 text-center">Registrar Pago</h2>
-        <div className=" grid grid-cols-2 gap-4 w-full">
+        <h2 className="text-3xl mb-5 text-center">Registrar Pago</h2>
+        <div className="grid grid-cols-2 gap-4 w-full">
           {dataInput?.map((item, i) => (
             <Input
               key={i}
               nombre={item.name}
-              funcion={handleInput}
-              valor={''}
+              funcion={() => handleInput}
+              valor={item?.name || ""}
               requerido={item.requerid}
               placeHolder={item.placeHolder}
               type={item.type}
@@ -108,10 +117,26 @@ export const RegisterPay: FC<RegisterPayProps> = (props) => {
             />
           ))}
         </div>
+        <h3>Facturas</h3>
+        <ul>
+          {Facturas.map((factura: any) => (
+            <li className="mt-2 mb-3" key={factura.id}>
+              <Input
+                checked={checkedFacturas[factura.id] || false}
+                funcion={() => handleCheckboxChange(factura)}
+                nombre={factura.fecha}
+                requerido={false}
+                type="checkbox"
+                valor={factura.pagado}
+              />
+            </li>
+          ))}
+        </ul>
+        <b><p>Total a pagar: { totalToPay }</p></b>
         <input
           type="submit"
-          value="Guardar"
-          className=" rounded-md bg-blue-600 text-white p-2 w-48 mt-5"
+          value="Pagar"
+          className={`${ s.button } rounded-md bg-blue-600 text-white p-2 w-48`}
         />
       </form>
     </div>
