@@ -4,11 +4,13 @@ import {  CreditCardIcon, PencilIcon } from '@primer/octicons-react'
 
 import s from './Table.module.css'
 
+import { User } from "@/app/customers/page"
+
 interface TableProps {
-  data:[itemProps]
-  handleUpdateCliente:() => itemProps
-  handleRegisterPay:() => itemPay
-} 
+  data: User[] | undefined; // Siempre será un array, evita `undefined`
+  handleUpdateCliente: (user: User[]) => void; // Recibe un usuario y no retorna nada
+  handleRegisterPay: (user: User[]) => void; // Recibe un usuario y no retorna nada
+}
 
 export interface itemPay {
   id: string;
@@ -24,6 +26,7 @@ export interface itemProps {
 }
 
 export const Table:FC<TableProps> = (props) => {
+
   const { data, handleUpdateCliente, handleRegisterPay } = props;
 
   return (
@@ -45,7 +48,7 @@ export const Table:FC<TableProps> = (props) => {
           </thead>
           <tbody className={s.tbody}>
             {
-              data?.map( (item,i) => (
+              data && data?.map( (item,i) => (
               <tr key={i}>
                 <td className={s.td}>
                   <span className={s.span}>{item.id}</span>
@@ -69,10 +72,10 @@ export const Table:FC<TableProps> = (props) => {
                   <span className={ `inline-flex px-2 text-xs font-medium leading-5 rounded-full  ${ item.estatus_servicio === true ? 'text-green-700  bg-green-100' : 'text-red-100 bg-red-700'}` }> { item.estatus_servicio == true ? "Activo" : "Suspendido" } </span>
                 </td>
                 <td className={s.td}>
-                  <span onClick={() => handleRegisterPay(item)} className={s.btnPay}> <CreditCardIcon size={24} fill="#ffffff" /> </span>
+                  <span onClick={() => handleRegisterPay([item])} className={s.btnPay}> <CreditCardIcon size={24} fill="#ffffff" /> </span>
                 </td>
                 <td className={s.td}>
-                  <span onClick={() => handleUpdateCliente(item)} className={s.btnEdit}> <PencilIcon size={24} fill="#ffffff" /> </span>
+                  <span onClick={() => handleUpdateCliente([item])} className={s.btnEdit}> <PencilIcon size={24} fill="#ffffff" /> </span>
                 </td>
             </tr>
               ) )

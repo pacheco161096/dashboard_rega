@@ -1,6 +1,6 @@
 "use client";
 
-import { FC, useCallback, useEffect, useState } from "react";
+import { FC,useEffect, useState } from "react";
 
 import s from "./RegisterPay.module.css";
 
@@ -8,8 +8,10 @@ import { Input } from "@/components/atoms/Input/Input";
 
 import axios from "axios";
 
+import { User } from "@/app/customers/page"
+
 export interface RegisterPayProps {
-  selectedUser: any[];
+  selectedUser:  User[] | undefined;
   handleModal: () => void;
 }
 
