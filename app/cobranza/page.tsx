@@ -98,56 +98,60 @@ function Cobranza() {
       {/* Drawer Nueva Venta */}
       <Drawer anchor="right" open={openVenta} onClose={() => setOpenVenta(false)}>
         <div className="w-96 p-4">
-          <h2 className="text-lg font-bold">
-            Crear Venta
-          </h2>
-          <label className="block mt-4">
-            Fecha de la venta*
-          </label>
-          <input type="date" className="w-full border p-2 rounded" />
-          <label className="block mt-4">
-            Cliente*
-          </label>
-          <input type="text" className="w-full border p-2 rounded" value={ user ? `${user.nombre} ${user.apellido}` : ''} />
-          <label className="block mt-4">
-            Monto*
-          </label>
-          <input type="number" className="w-full border p-2 rounded" />
-          <button className="bg-blue-500 text-white px-4 py-2 mt-4 rounded w-full">
-            Crear Venta
-          </button>
-          <button className="bg-red-500 text-white px-4 py-2 mt-4 rounded w-full" onClick={() => setOpenVenta(false)}>
-            Cancelar
-          </button>
+          <form>
+            <h2 className="text-lg font-bold">
+              Crear Venta
+            </h2>
+            <label className="block mt-4">
+              Fecha de la venta*
+            </label>
+            <input type="date" className="w-full border p-2 rounded" />
+            <label className="block mt-4">
+              Cliente*
+            </label>
+            <input type="text" className="w-full border p-2 rounded" value={ user ? `${user.nombre} ${user.apellido}` : ''} />
+            <label className="block mt-4">
+              Monto*
+            </label>
+            <input type="number" className="w-full border p-2 rounded" />
+            <button className="bg-blue-500 text-white px-4 py-2 mt-4 rounded w-full">
+              Crear Venta
+            </button>
+            <button className="bg-red-500 text-white px-4 py-2 mt-4 rounded w-full" onClick={() => setOpenVenta(false)}>
+              Cancelar
+            </button>
+          </form>
         </div>
       </Drawer>
 
       {/* Drawer Nuevo Gasto */}
       <Drawer anchor="right" open={openGasto} onClose={() => setOpenGasto(false)}>
         <div className="w-96 p-4">
-          <h2 className="text-lg font-bold">
-            Nuevo Gasto
-          </h2>
-          <label className="block mt-4">
-            Fecha del gasto*
-          </label>
-          <input type="date" className="w-full border p-2 rounded" />
-          <label className="block mt-4">
-            Categoría del gasto*
-          </label>
-          <select className="w-full border p-2 rounded">
-            <option>Selecciona una categoría</option>
-          </select>
-          <label className="block mt-4">
-            Monto*
-          </label>
-          <input type="number" className="w-full border p-2 rounded" />
-          <button className="bg-blue-500 text-white px-4 py-2 mt-4 rounded w-full">
-            Crear Gasto
-          </button>
-          <button className="bg-red-500 text-white px-4 py-2 mt-4 rounded w-full" onClick={() => setOpenGasto(false)}>
-            Cancelar
-          </button>
+          <form>
+            <h2 className="text-lg font-bold">
+              Nuevo Gasto
+            </h2>
+            <label className="block mt-2">
+              Fecha del gasto*
+            </label>
+            <input type="date" className="w-full border p-2 rounded" />
+            <label className="block mt-2">
+              Categoría del gasto*
+            </label>
+            <select className="w-full border p-2 rounded">
+              <option>Selecciona una categoría</option>
+            </select>
+            <label className="block mt-2">
+              Monto*
+            </label>
+            <input type="number" className="w-full border p-2 rounded" />
+            <button className="bg-blue-500 text-white px-4 py-2 mt-4 rounded w-full">
+              Crear Gasto
+            </button>
+            <button className="bg-red-500 text-white px-4 py-2 mt-4 rounded w-full" onClick={() => setOpenGasto(false)}>
+              Cancelar
+            </button>
+          </form>
         </div>
       </Drawer>
     </div>
