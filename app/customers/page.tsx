@@ -1,12 +1,10 @@
 'use client'
 
 import { useState, useEffect, useCallback } from "react";
-
 import { Button, Modal, SearchBox, Table, CreateCustomer, UpdateCustomer, RegisterPay } from "@/components";
-
 import axios from 'axios';
-
 import s from './customers.module.css'
+import { useRouter } from "next/navigation";
 
 export interface Role {
   id: number;
@@ -60,7 +58,6 @@ export interface User {
 export default function Customers() {
 
   const [showModalClient, setShowModalClient] = useState(false)
-  const [showModalPay, setShowModalPay] = useState(false)
   const [updateCliente, setUpdateCliente] = useState<User[]>()
   const [isNewCliente, setIsNewCliente] = useState(false)
 
@@ -68,6 +65,7 @@ export default function Customers() {
   const [data, setData] = useState<User[]>();
   const [filterData, setFilterData] = useState<User[]>();
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     fetchData();
@@ -106,14 +104,10 @@ export default function Customers() {
 
   /* Pagos */
 
-  const handleModalPay = useCallback(() => {
-    setShowModalPay(!showModalPay)
-  }, [showModalPay]);
-
-  const handleRegisterPay = useCallback((user: User[]) => {
-    setUpdateCliente(user);
-    setShowModalPay(!showModalPay)
-  }, [showModalPay])
+  const handleRegisterPay = (user: User[]) => {
+    sessionStorage.setItem("selectedUser", JSON.stringify(user));
+    router.push("/cobranza");
+  };
 
   const handleFilter = useCallback((item: string) => {
     const user = data && data.filter((a) => a.id === parseInt(item) || a.nombre === item || a.email === item)
@@ -134,14 +128,6 @@ export default function Customers() {
           {isNewCliente ? <CreateCustomer handleModal={handleModalClient} /> : <UpdateCustomer  data={ updateCliente ? updateCliente : null } />}
         </Modal>
       }
-
-      {
-        showModalPay &&
-        <Modal handleModal={handleModalPay}>
-          <RegisterPay handleModal={handleModalPay} selectedUser={ updateCliente } />
-        </Modal>
-      }
-
 
       <div className={s.header}>
         <Button onClick={handleNewCliente} variant="primary" size="md">Nuevo Cliente</Button>

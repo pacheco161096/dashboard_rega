@@ -35,7 +35,7 @@ export default function RootLayout({
         <Navbar/>
         <div className={s.container}>
           <header className={s.header}>
-            <h1 className={s.h1}>Clientes</h1>
+            <h1 className={s.h1}>Sección</h1>
             <div className={s.contentUser}>
               <div>
                 <PersonFillIcon size={24} />
