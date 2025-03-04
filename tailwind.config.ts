@@ -13,6 +13,9 @@ const config: Config = {
         foreground: "var(--foreground)",
         primary:'bg-blue-600'
       },
+      fontFamily: {
+        roboto: ['Roboto', 'sans-serif'],
+      },
     },
   },
   plugins: [],

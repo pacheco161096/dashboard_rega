@@ -16,6 +16,8 @@ export interface Role {
 }
 
 export interface Factura {
+  precio: ReactNode;
+  titulo: ReactNode;
   id: number;
   fecha: string;
   pagado: boolean;
@@ -23,6 +25,7 @@ export interface Factura {
 }
 
 export interface User {
+  recargo: ReactNode;
   id: number;
   username: string;
   email: string;

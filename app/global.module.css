@@ -1,5 +1,5 @@
 .background {
-    @apply bg-slate-100 flex h-screen;
+    @apply bg-gray-800 flex h-screen;
 }
 
 .container {
