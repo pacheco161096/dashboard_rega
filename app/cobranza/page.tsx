@@ -11,6 +11,7 @@ function Cobranza() {
   const [tab, setTabNew] = useState(1);
   const [user, setUser] = useState<User | null>(null);
   const [carShop, setCarShop] = useState([])
+  const [currentDate, setCurrentDate] = useState("");
 
   useEffect(() => {
     const selectedUser = sessionStorage.getItem("selectedUser");
@@ -20,16 +21,20 @@ function Cobranza() {
       if (Array.isArray(parsedUser) && parsedUser.length > 0) {
         setUser(parsedUser[0]);
         setOpenVenta(true);
+        setTabNew(2);
+        fetchDataUser(parsedUser[0]?.id);
       }
-      // sessionStorage.removeItem("selectedUser"); // TODO: Limpiar dato después de usarlo
     }
+
+    const today = new Date().toISOString().split("T")[0]; // Obtener la fecha en formato YYYY-MM-DD
+    setCurrentDate(today);
   }, []);
 
-  const fetchDataUser = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const fetchDataUser = async (userId: string) => {
     try {
-      const response = await axios.post('https://monkfish-app-2et8k.ondigitalocean.app/api/searchUserPayment', {
-        idusuario: e.target.userId.value 
+      const response = await axios.post('https://monkfish-app-2et8k.ondigitalocean.app/api/searchUserPayment',
+      {
+        idusuario: userId
       });
       setUser(response.data);
     } catch (err) {
@@ -54,6 +59,17 @@ function Cobranza() {
       }
     });
   };
+
+  function openDrawerVenta() {
+    setOpenVenta(true);
+    setTabNew(1);
+  }
+
+  function closeDrawerVenta() {
+    sessionStorage.removeItem("selectedUser"); // Limpia dato del storage
+    setUser(null);
+    setOpenVenta(false);
+  }
   
 
   const SubmitVenta = (e: { preventDefault: () => void; }) => {
@@ -86,7 +102,7 @@ function Cobranza() {
         <div className={s["Cobranza-actions"]}>
           <button
             className="bg-green-600 text-white px-2 py-1 rounded-md"
-            onClick={() => setOpenVenta(true)}
+            onClick={() => openDrawerVenta()}
           >
             ✅ Nueva venta
           </button>
@@ -162,7 +178,13 @@ function Cobranza() {
                   </div>
                 </div> 
                 : <div className="flex flex-col">
-                    <form onSubmit={(e) => fetchDataUser(e)} className="mb-2">
+                    <form onSubmit={(e) => {
+                            e.preventDefault();
+                            const userId = (e.currentTarget.userId as HTMLInputElement).value;
+                            fetchDataUser(userId);
+                          }} 
+                        className="mb-2"
+                    >
                       <label className="block mt-4 text-gray-400 text-sm">
                           Buscar Cliente
                         </label>
@@ -185,17 +207,25 @@ function Cobranza() {
                       </div>
                       <div className="flex flex-col">
                         <div className="grid grid-cols-2 text-gray-400">Facturas Pendientes: </div>
-                        {user?.Facturas?.map(factura => 
-                          <div key={factura.id} className={`${user?.recargo ? 'bg-rose-500' : 'bg-slate-600'} p-2 rounded-lg grid grid-cols-4 text-center text-xs justify-center items-center`}>
-                            <div>{ factura?.fecha }</div>
-                            <div>{ factura?.titulo }</div>
-                            <div>${ factura?.precio }</div>
-                            <div className="flex justify-center items-center cursor-pointer" onClick={() => addCarShop({id: factura.id, fecha: factura?.fecha, titulo: factura?.titulo, precio: factura?.precio, cantidad: 1 ,type: 'paquete'})}>
-                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                              </svg>
-                            </div>
-                          </div>)
+                        {
+                          user?.Facturas?.map(factura => {
+                            const isInCart = carShop.some((item) => item.id === factura.id);
+                            return (
+                              <div key={factura.id} className={`${user?.recargo ? 'bg-rose-500' : 'bg-slate-600'} p-2 rounded-lg grid grid-cols-4 text-center text-xs justify-center items-center`}>
+                                <div>{factura?.fecha}</div>
+                                <div>{factura?.titulo}</div>
+                                <div>${factura?.precio}</div>
+                                { !isInCart && 
+                                  <div className="flex justify-center items-center cursor-pointer" onClick={() => addCarShop({ id: factura.id, fecha: factura?.fecha, titulo: factura?.titulo, precio: factura?.precio, cantidad: 1, type: 'paquete' })}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                    </svg>
+                                  </div>
+                                }
+                              </div>
+                            )
+                          }
+                          )
                         }
                       </div>
                     </div>}
@@ -227,18 +257,18 @@ function Cobranza() {
                 <div><span className="font-bold">Total:</span> ${totalPrecio}</div>
               </div>
             </div>}
-            <label className="block mt-4 text-gray-400 text-sm">
+            {/* <label className="block mt-4 text-gray-400 text-sm">
               Monto
             </label>
-            <input type="number" className="w-full border p-2 rounded" />
+            <input type="number" className="w-full border p-2 rounded" /> */}
             <label className="block mt-4 text-gray-400 text-sm">
               Fecha de la venta
             </label>
-            <input type="date" className="w-full border p-2 rounded" />
+            <input type="date" value={currentDate} className="w-full border p-2 mb-4 rounded text-black" />
             <button className="bg-indigo-500 text-white px-4 py-2 mt-4 rounded w-full">
               Crear Venta
             </button>
-            <button className="bg-rose-500 text-white px-4 py-2 mt-4 rounded w-full" onClick={() => setOpenVenta(false)}>
+            <button className="bg-rose-500 text-white px-4 py-2 mt-4 rounded w-full" onClick={() => closeDrawerVenta()}>
               Cancelar
             </button>
           </div>
