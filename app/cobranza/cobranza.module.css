@@ -32,19 +32,15 @@
 }
 
 .Cobranza-sidebar {
-  @apply flex flex-col align-middle justify-between h-full w-1/3 border-l-2 pl-2;
+  @apply flex flex-col align-middle justify-start h-full w-1/3 border-l-2 pl-2;
 }
 
 .Cobranza-titleSide {
-  @apply flex items-center justify-around;
+  @apply flex items-center justify-center;
 }
 
-.Cobranza-cart {
-  @apply flex flex-col text-center;
-}
-
-.Cobranza-footer {
-  @apply flex justify-between bg-gray-200 text-gray-700 px-4 py-2 rounded-md cursor-pointer;
+.Cobranza-list {
+  @apply h-1/3 p-2;
 }
 
 .Cobranza-drawer {
@@ -55,6 +51,18 @@
   @apply translate-x-0;
 }
 
+.Cobranza-buttonCounter {
+  @apply flex align-middle justify-center px-1 border-2 border-gray-300 rounded-md;
+}
+
 .Cobranza-overlay {
   @apply fixed inset-0 bg-black bg-opacity-50;
+}
+
+.Cobranza-buttonPay {
+  @apply bg-indigo-600 text-white px-4 py-2 mt-4 rounded w-full;
+}
+
+.Cobranza-buttonDisable {
+  @apply bg-gray-600 text-white px-4 py-2 mt-4 rounded w-full cursor-not-allowed;
 }
