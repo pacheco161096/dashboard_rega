@@ -32,6 +32,10 @@ function Cobranza() {
   }, []);
 
   const fetchDataUser = async (userId: string) => {
+    if (carShop.length > 0) {
+      setCarShop([]);
+    }
+
     try {
       const response = await axios.post('https://monkfish-app-2et8k.ondigitalocean.app/api/searchUserPayment',
       {
@@ -85,8 +89,12 @@ function Cobranza() {
   }
 
   function closeDrawerVenta() {
-    sessionStorage.removeItem("selectedUser"); // Limpia dato del storage
+    if (carShop.length > 0) {
+      setCarShop([]);
+    }
+    
     setUser(null);
+    sessionStorage.removeItem("selectedUser"); // Limpia user del storage
     setOpenVenta(false);
   }
   
