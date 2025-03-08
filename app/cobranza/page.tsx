@@ -5,13 +5,29 @@ import Drawer from "@mui/material/Drawer";
 import { User } from "../customers/page";
 import axios from 'axios';
 
+export interface ItemCarInt {
+  id: number;
+  titulo: string;
+  precio: number;
+  cantidad: number;
+  type: string;
+  fecha: string;
+}
+
+export interface FacturaInt {
+  id: number;
+  titulo: string;
+  precio: number;
+  fecha: string;
+}
+
 function Cobranza() {
   type CarShopItem = { id: number; cantidad: number; precio: number, fecha: string, titulo: string, type: string };
   const [openVenta, setOpenVenta] = useState(false);
   const [openGasto, setOpenGasto] = useState(false);
   const [tab, setTabNew] = useState(1);
   const [user, setUser] = useState<User | null>(null);
-  const [carShop, setCarShop] = useState<CarShopItem[]>([]);
+  const [carShop, setCarShop] = useState<ItemCarInt[]>([])
   const [currentDate, setCurrentDate] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("Efectivo");
 
@@ -262,7 +278,7 @@ function Cobranza() {
                         }
                         <div className="grid grid-cols-2 text-gray-400 mt-4">Facturas Pendientes: </div>
                         {
-                          user?.Facturas?.map(factura => {
+                          user?.Facturas?.map((factura: FacturaInt) => {
                             const isInCart = carShop.some((item) => item.id === factura.id);
                             return (
                               <div key={factura.id} className={`${user?.recargo ? 'bg-rose-500' : 'bg-slate-600'} p-2 rounded-lg grid grid-cols-4 text-center text-xs justify-center items-center`}>
