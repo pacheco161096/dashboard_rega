@@ -21,6 +21,8 @@ export type Factura = {
   pagado: boolean;
   id_paquete: string;
   idTransaccion: string | null;
+  titulo: string;
+  precio: number;
 };
 
 export type User = {
@@ -55,6 +57,7 @@ export type User = {
   recargo: boolean;
   role: Role;
   Facturas: Factura[];
+  paqueteActual: any;
 };
 
 export default function Customers() {

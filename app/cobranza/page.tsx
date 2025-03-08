@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import s from "./cobranza.module.css";
 import Drawer from "@mui/material/Drawer";
-import { User } from "../customers/page";
+import { Factura, User } from "../customers/page";
 import axios from 'axios';
 
 export interface ItemCarInt {
@@ -14,15 +14,7 @@ export interface ItemCarInt {
   fecha: string;
 }
 
-export interface FacturaInt {
-  id: number;
-  titulo: string;
-  precio: number;
-  fecha: string;
-}
-
 function Cobranza() {
-  type CarShopItem = { id: number; cantidad: number; precio: number, fecha: string, titulo: string, type: string };
   const [openVenta, setOpenVenta] = useState(false);
   const [openGasto, setOpenGasto] = useState(false);
   const [tab, setTabNew] = useState(1);
@@ -66,7 +58,7 @@ function Cobranza() {
     }
   };
 
-  const addCarShop = (item: CarShopItem) => {
+  const addCarShop = (item: ItemCarInt) => {
     setCarShop((prevCarShop) => {
       // Verificar si el producto ya está en el carrito
       const existingItem = prevCarShop.find((product) => product.id === item.id);
@@ -280,7 +272,7 @@ function Cobranza() {
                       </div>
                       <div className="flex flex-col">
                         <div className="grid grid-cols-2 text-gray-400">Paquete Actual: </div>
-                        {
+                        {/* {
                           <div key={user.paqueteActual.id} className='bg-slate-600 p-2 rounded-lg grid grid-cols-4 text-center text-xs justify-center items-center'>
                             <div>{user.paqueteActual.titulo}</div>
                             <div></div>
@@ -291,10 +283,10 @@ function Cobranza() {
                               </svg>
                             </div>
                           </div>
-                        }
+                        } */}
                         <div className="grid grid-cols-2 text-gray-400 mt-4">Facturas Pendientes: </div>
                         {
-                          user?.Facturas?.map((factura: FacturaInt) => {
+                          user?.Facturas?.map((factura: Factura) => {
                             const isInCart = carShop.some((item) => item.id === factura.id);
                             return (
                               <div key={factura.id} className={`${user?.recargo ? 'bg-rose-500' : 'bg-slate-600'} p-2 rounded-lg grid grid-cols-4 text-center text-xs justify-center items-center`}>
