@@ -116,7 +116,7 @@ function Cobranza() {
         idusuario: user?.id,
         carshop: carShop
       });
-      setUser(response.data);
+      //setUser(response.data);
     } catch (err) {
       console.log('error' + err)
     } finally {
@@ -323,7 +323,8 @@ function Cobranza() {
                 </div>
               </div>
             }
-            <div className="flex flex-col">
+            {
+              carShop.length > 0 && <div className="flex flex-col">
               <label className="block mt-4 text-gray-400 text-sm" htmlFor="payment-method">
                 Método de Pago
               </label>
@@ -334,6 +335,7 @@ function Cobranza() {
                 <option value="Transferencia">Transferencia</option>
               </select>
             </div>
+            }
             <button className={carShop.length > 0 ? s["Cobranza-buttonPay"] : s["Cobranza-buttonDisable"]} disabled={carShop.length == 0} onClick={() => sendPay()}>
               Pagar
             </button>
