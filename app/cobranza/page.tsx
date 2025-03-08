@@ -29,12 +29,13 @@ function Cobranza() {
   const [carShop, setCarShop] = useState<ItemCarInt[]>([])
   const [currentDate, setCurrentDate] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("Efectivo");
+  const [isOpenCaja, setIsOpenCaja] = useState(false);
 
   useEffect(() => {
     const selectedUser = sessionStorage.getItem("selectedUser");
     if (selectedUser) {
       const parsedUser = JSON.parse(selectedUser);
-      
+
       if (Array.isArray(parsedUser) && parsedUser.length > 0) {
         setUser(parsedUser[0]);
         setOpenVenta(true);
@@ -54,9 +55,9 @@ function Cobranza() {
 
     try {
       const response = await axios.post('https://monkfish-app-2et8k.ondigitalocean.app/api/searchUserPayment',
-      {
-        idusuario: userId
-      });
+        {
+          idusuario: userId
+        });
       setUser(response.data);
     } catch (err) {
       console.log('error' + err)
@@ -66,11 +67,11 @@ function Cobranza() {
 
   const addCarShop = (item: ItemCarInt) => {
     console.log('item addCar ', item);
-    
+
     setCarShop((prevCarShop) => {
       // Verificar si el producto ya está en el carrito
       const existingItem = prevCarShop.find((product) => product.id === item.id);
-      
+
       if (existingItem) {
         // Si el producto existe, incrementar la cantidad
         return prevCarShop.map((product) =>
@@ -90,7 +91,7 @@ function Cobranza() {
       )
     );
   };
-  
+
   const decrementQuantity = (id: number) => {
     setCarShop((prevCarShop) =>
       prevCarShop
@@ -110,19 +111,19 @@ function Cobranza() {
     if (carShop.length > 0) {
       setCarShop([]);
     }
-    
+
     setUser(null);
     sessionStorage.removeItem("selectedUser"); // Limpia user del storage
     setOpenVenta(false);
   }
-  
+
 
   const SubmitVenta = (e: { preventDefault: () => void; }) => {
     e.preventDefault();
   }
 
   const totalPrecio = carShop.reduce((total, item) => {
-    return total + (item.precio * item.cantidad); 
+    return total + (item.precio * item.cantidad);
   }, 0);
 
   return (
@@ -140,19 +141,19 @@ function Cobranza() {
               className="outline-1 px-2 py-1 bg-transparent ml-2 w-full"
             />
           </div>
-          <button className="bg-gray-500 text-white px-2 py-1 rounded-md">
-            🏦 Abrir caja
+          <button className="bg-gray-500 text-white px-2 py-1 rounded-md" onClick={() => setIsOpenCaja(!isOpenCaja)}>
+            🏦 {!isOpenCaja ? 'Abrir caja' : 'Cerrar caja'}
           </button>
         </div>
         <div className={s["Cobranza-actions"]}>
           <button
-            className="bg-green-600 text-white px-2 py-1 rounded-md"
+            className={isOpenCaja ? s["Cobranza-buttonVenta"] : s["Cobranza-buttonDisVentaGast"]}
             onClick={() => openDrawerVenta()}
           >
             ✅ Nueva venta
           </button>
           <button
-            className="bg-red-600 text-white px-2 py-1 rounded-md"
+            className={isOpenCaja ? s["Cobranza-buttonGasto"] : s["Cobranza-buttonDisVentaGast"]}
             onClick={() => setOpenGasto(true)}
           >
             ❌ Nuevo gasto
@@ -160,40 +161,55 @@ function Cobranza() {
         </div>
       </div>
       {/* Container */}
-      <div className={s["Cobranza-container"]}>
-        {/* Sección de productos */}
-        <div className={s["Cobranza-products"]}>
-          <button className="border border-black rounded-lg flex flex-col items-center justify-center p-6 h-60 w-40">
-            <span className="text-xl">➕</span>
-            <span className="text-md">
-              Crear producto
-            </span>
-          </button>
-        </div>
-        {/* Sidebar */}
-        <div className={s["Cobranza-sidebar"]}>
-          <h1 className="text-center font-semibold mb-3">
-            Movimientos del { currentDate }
-          </h1>
-          <div className={s["Cobranza-titleSide"]}>
-            <h3 className="font-semibold">
-              Ventas
-            </h3>
+      {
+        !isOpenCaja && (
+          <div className="flex h-full w-full">
+            <div className="flex justify-center items-center text-center w-full">
+              <span className="text-4xl">
+                Caja cerrada. Ábrela para empezar a operar.
+              </span>
+            </div>
           </div>
-          <ul className={s["Cobranza-list"]}>
-            <li>Concepto</li>
-          </ul>
-          <div className={s["Cobranza-titleSide"]}>
-            <h3 className="font-semibold">
-              Gastos
-            </h3>
+        )
+      }
+      {
+        isOpenCaja && (
+          <div className={s["Cobranza-container"]}>
+            {/* Sección de productos */}
+            <div className={s["Cobranza-products"]}>
+              <button className="border border-black rounded-lg flex flex-col items-center justify-center p-6 h-60 w-40">
+                <span className="text-xl">➕</span>
+                <span className="text-md">
+                  Crear producto
+                </span>
+              </button>
+            </div>
+            {/* Sidebar */}
+            <div className={s["Cobranza-sidebar"]}>
+              <h1 className="text-center font-semibold mb-3">
+                Movimientos del {currentDate}
+              </h1>
+              <div className={s["Cobranza-titleSide"]}>
+                <h3 className="font-semibold">
+                  Ventas
+                </h3>
+              </div>
+              <ul className={s["Cobranza-list"]}>
+                <li>Concepto</li>
+              </ul>
+              <div className={s["Cobranza-titleSide"]}>
+                <h3 className="font-semibold">
+                  Gastos
+                </h3>
+              </div>
+              <ul className={s["Cobranza-list"]}>
+                <li>Concepto</li>
+              </ul>
+            </div>
           </div>
-          <ul className={s["Cobranza-list"]}>
-            <li>Concepto</li>
-          </ul>
-        </div>
-      </div>
-      
+        )
+      }
+
       {/* Drawer Nueva Venta */}
       <Drawer anchor="right" open={openVenta} onClose={() => setOpenVenta(false)}>
         <div className="w-96 h-full p-4 bg-gray-800 outline outline-black/5  font-roboto text-white">
@@ -219,34 +235,34 @@ function Cobranza() {
                       </svg>
                     </button>
                   </div>
-                </div> 
-                : <div className="flex flex-col">
+                </div>
+                  : <div className="flex flex-col">
                     <form onSubmit={(e) => {
-                            e.preventDefault();
-                            const userId = (e.currentTarget.userId as HTMLInputElement).value;
-                            fetchDataUser(userId);
-                          }} 
-                        className="mb-2"
+                      e.preventDefault();
+                      const userId = (e.currentTarget.userId as HTMLInputElement).value;
+                      fetchDataUser(userId);
+                    }}
+                      className="mb-2"
                     >
                       <label className="block mt-4 text-gray-400 text-sm">
-                          Buscar Cliente
-                        </label>
-                        <div className="w-full h-10 border border-gray-900 rounded-lg flex p-2">
-                          <input type="number" pattern="[0-9]*" name='userId' required className="bg-transparent border-none outline-none w-[90%] h-full  [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-moz-appearance:textfield]" />
-                          <button>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-4">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
-                            </svg>
-                          </button>
-                        </div>
+                        Buscar Cliente
+                      </label>
+                      <div className="w-full h-10 border border-gray-900 rounded-lg flex p-2">
+                        <input type="number" pattern="[0-9]*" name='userId' required className="bg-transparent border-none outline-none w-[90%] h-full  [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-moz-appearance:textfield]" />
+                        <button>
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-4">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                          </svg>
+                        </button>
+                      </div>
                     </form>
-                    { user && <div className="flex flex-col">
+                    {user && <div className="flex flex-col">
                       <div>
                         <span className="">{user?.nombre} {user?.apellido}</span>
                       </div>
                       <div className="grid grid-cols-2 text-gray-400 mb-2">
-                        <span className="text-sm">{ user?.email }</span>
-                        <span  className="text-sm">{ user?.celular}</span>
+                        <span className="text-sm">{user?.email}</span>
+                        <span className="text-sm">{user?.celular}</span>
                       </div>
                       <div className="flex flex-col">
                         <div className="grid grid-cols-2 text-gray-400">Facturas Pendientes: </div>
@@ -258,7 +274,7 @@ function Cobranza() {
                                 <div>{factura?.fecha}</div>
                                 <div>{factura?.titulo}</div>
                                 <div>${factura?.precio}</div>
-                                { !isInCart && 
+                                {!isInCart &&
                                   <div className="flex justify-center items-center cursor-pointer" onClick={() => addCarShop({ id: factura.id, fecha: factura?.fecha, titulo: factura?.titulo, precio: factura?.precio, cantidad: 1, type: 'paquete' })}>
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
                                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
@@ -272,7 +288,7 @@ function Cobranza() {
                         }
                       </div>
                     </div>}
-                </div>}
+                  </div>}
               </div>
             </div>
             {
@@ -295,13 +311,13 @@ function Cobranza() {
                       <span>{item?.titulo}</span>
                       <span>${item?.precio}</span>
                       <div className="grid grid-cols-3">
-                        <button className={s["Cobranza-buttonCounter"]} onClick={ () => decrementQuantity(item.id) }>
+                        <button className={s["Cobranza-buttonCounter"]} onClick={() => decrementQuantity(item.id)}>
                           -
                         </button>
                         <div className="text-center">
                           {item?.cantidad}
                         </div>
-                        <button className={s["Cobranza-buttonCounter"]} onClick={ () => incrementQuantity(item.id) }>
+                        <button className={s["Cobranza-buttonCounter"]} onClick={() => incrementQuantity(item.id)}>
                           +
                         </button>
                       </div>
