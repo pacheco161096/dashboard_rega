@@ -6,11 +6,12 @@ import { User } from "../customers/page";
 import axios from 'axios';
 
 function Cobranza() {
+  type CarShopItem = { id: number; cantidad: number; precio: number, fecha: string, titulo: string, type: string };
   const [openVenta, setOpenVenta] = useState(false);
   const [openGasto, setOpenGasto] = useState(false);
   const [tab, setTabNew] = useState(1);
   const [user, setUser] = useState<User | null>(null);
-  const [carShop, setCarShop] = useState([])
+  const [carShop, setCarShop] = useState<CarShopItem[]>([]);
   const [currentDate, setCurrentDate] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("Efectivo");
 
@@ -33,7 +34,7 @@ function Cobranza() {
 
   const fetchDataUser = async (userId: string) => {
     try {
-      const response = await axios.post('https://monkfish-app-2et8k.ondigitalocean.app/api/searchUserPayment',
+      const response = await axios.post('http://localhost:1337/api/searchUserPayment',
       {
         idusuario: userId
       });
@@ -44,24 +45,25 @@ function Cobranza() {
     }
   };
 
-  const addCarShop = (item: { id: string, titulo: string, precio: number, cantidad: number, type: string }) => {
+  const addCarShop = (item: CarShopItem) => {
     setCarShop((prevCarShop) => {
       // Verificar si el producto ya está en el carrito
       const existingItem = prevCarShop.find((product) => product.id === item.id);
-      
+  
       if (existingItem) {
         // Si el producto existe, incrementar la cantidad
         return prevCarShop.map((product) =>
           product.id === item.id ? { ...product, cantidad: product.cantidad + 1 } : product
         );
       } else {
-        // Si el producto no existe, agregarlo al carrito con cantidad 1
-        return [...prevCarShop, { ...item, cantidad: 1 }];
+        // Si el producto no existe, agregarlo al carrito conservando su cantidad inicial si ya la tiene
+        return [...prevCarShop, { ...item, cantidad: item.cantidad || 1 }];
       }
     });
   };
+  
 
-  const incrementQuantity = (id: string) => {
+  const incrementQuantity = (id: number) => {
     setCarShop((prevCarShop) =>
       prevCarShop.map((item) =>
         item.id === id ? { ...item, cantidad: item.cantidad + 1 } : item
@@ -69,7 +71,7 @@ function Cobranza() {
     );
   };
   
-  const decrementQuantity = (id: string) => {
+  const decrementQuantity = (id: number) => {
     setCarShop((prevCarShop) =>
       prevCarShop
         .map((item) =>
@@ -98,6 +100,20 @@ function Cobranza() {
   const totalPrecio = carShop.reduce((total, item) => {
     return total + (item.precio * item.cantidad); 
   }, 0);
+
+  const sendPay = async () => {
+    try {
+      const response = await axios.post('http://localhost:1337/api/pay',
+      {
+        idusuario: user?.id,
+        carshop: carShop
+      });
+      setUser(response.data);
+    } catch (err) {
+      console.log('error' + err)
+    } finally {
+    }
+  }
 
   return (
     <div className={s.Cobranza}>
@@ -223,7 +239,20 @@ function Cobranza() {
                         <span  className="text-sm">{ user?.celular}</span>
                       </div>
                       <div className="flex flex-col">
-                        <div className="grid grid-cols-2 text-gray-400">Facturas Pendientes: </div>
+                        <div className="grid grid-cols-2 text-gray-400">Paquete Actual: </div>
+                        {
+                          <div key={user.paqueteActual.id} className='bg-slate-600 p-2 rounded-lg grid grid-cols-4 text-center text-xs justify-center items-center'>
+                            <div>{user.paqueteActual.titulo}</div>
+                            <div></div>
+                            <div>${user.paqueteActual?.precio}</div>
+                            <div className="flex justify-center items-center cursor-pointer">
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                              </svg>
+                            </div>
+                          </div>
+                        }
+                        <div className="grid grid-cols-2 text-gray-400 mt-4">Facturas Pendientes: </div>
                         {
                           user?.Facturas?.map(factura => {
                             const isInCart = carShop.some((item) => item.id === factura.id);
@@ -286,16 +315,18 @@ function Cobranza() {
                 </div>
               </div>
             }
-            <label className="block mt-4 text-gray-400 text-sm" htmlFor="payment-method">
-              Método de Pago
-            </label>
-            <select className="w-full border p-2 rounded text-black mb-4" id="payment-method" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
-              <option value="Efectivo">Efectivo</option>
-              <option value="TarjetaDC">Tarjeta Débito/Crédito</option>
-              <option value="Deposito">Depósito</option>
-              <option value="Transferencia">Transferencia</option>
-            </select>
-            <button className={carShop.length > 0 ? s["Cobranza-buttonPay"] : s["Cobranza-buttonDisable"]} disabled={carShop.length == 0}>
+            <div className="flex flex-col">
+              <label className="block mt-4 text-gray-400 text-sm" htmlFor="payment-method">
+                Método de Pago
+              </label>
+              <select className="w-full border p-2 rounded text-black mb-4" id="payment-method" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
+                <option value="Efectivo">Efectivo</option>
+                <option value="TarjetaDC">Tarjeta Débito/Crédito</option>
+                <option value="Deposito">Depósito</option>
+                <option value="Transferencia">Transferencia</option>
+              </select>
+            </div>
+            <button className={carShop.length > 0 ? s["Cobranza-buttonPay"] : s["Cobranza-buttonDisable"]} disabled={carShop.length == 0} onClick={() => sendPay()}>
               Pagar
             </button>
             <button className="bg-rose-500 text-white px-4 py-2 mt-4 rounded w-full" onClick={() => closeDrawerVenta()}>
