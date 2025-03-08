@@ -1,5 +1,5 @@
 .background {
-    @apply bg-gray-800 flex h-screen;
+    @apply bg-white flex h-screen;
 }
 
 .container {
@@ -20,5 +20,5 @@
 }
 
 .main {
-    @apply w-full bg-white min-h-96 rounded-md shadow-lg p-5; 
+    @apply w-full bg-white h-auto rounded-md shadow-lg p-5; 
 }

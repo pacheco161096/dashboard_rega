@@ -6,7 +6,7 @@ export interface InputProps {
   required: boolean;
   placeHolder: string;
   type: string;
-  value: string;
+  value?: string;
   label?: string;
   isEdited?: boolean;
   defaultValue?: string;
@@ -41,7 +41,7 @@ export const Input: FC<InputProps> = ({
         placeholder={placeHolder}
         required={required}
         value={value}
-        onChange={(e) => funcion(e.target.value, name)}
+        onChange={(e) => funcion(name,e.target.value)}
         disabled={isEdited}
         checked={isCheckbox ? checked : undefined}
         defaultValue={defaultValue}

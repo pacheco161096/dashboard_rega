@@ -7,7 +7,7 @@
 }
 
 .table {
-    @apply w-full whitespace-nowrap;
+    @apply w-full whitespace-nowrap h-auto;
 }
 
 .thead {
