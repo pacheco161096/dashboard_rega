@@ -6,6 +6,7 @@ import { User } from "../customers/page";
 import axios from 'axios';
 
 export interface ItemCarInt {
+  idfactura: string;
   id: number;
   titulo: string;
   precio: number;
@@ -15,19 +16,22 @@ export interface ItemCarInt {
 }
 
 export interface FacturaInt {
+  idfactura: number;
   id: number;
   titulo: string;
   precio: number;
   fecha: string;
 }
 
+
 function Cobranza() {
-  type CarShopItem = { id: number; cantidad: number; precio: number, fecha: string, titulo: string, type: string };
+  type CarShopItem = { id: number; cantidad: number; precio: number, fecha: string, titulo: string, type: string, idfactura: string };
   const [openVenta, setOpenVenta] = useState(false);
   const [openGasto, setOpenGasto] = useState(false);
   const [tab, setTabNew] = useState(1);
   const [user, setUser] = useState<User | null>(null);
   const [carShop, setCarShop] = useState<ItemCarInt[]>([])
+  const [facturasAgregadas, setFacturasAgregadas] = useState<number[]>([]);
   const [currentDate, setCurrentDate] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("Efectivo");
 
@@ -80,6 +84,10 @@ function Cobranza() {
         return [...prevCarShop, { ...item, cantidad: item.cantidad || 1 }];
       }
     });
+    setFacturasAgregadas(prevFacturas => [
+      ...prevFacturas, 
+      Number(item.idfactura) // Asegura que sea un número
+    ]);
   };
   
 
@@ -127,10 +135,12 @@ function Cobranza() {
 
   const sendPay = async () => {
     try {
-      const response = await axios.post('http://localhost:1337/api/pay',
+
+      const response = await axios.post('http://localhost:1337/api/payment',
       {
         idusuario: user?.id,
-        carshop: carShop
+        carshop: carShop, 
+        metodo: paymentMethod,
       });
       //setUser(response.data);
     } catch (err) {
@@ -270,23 +280,20 @@ function Cobranza() {
                             <div></div>
                             <div>${user.paqueteActual?.precio}</div>
                             <div className="flex justify-center items-center cursor-pointer">
-                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                              </svg>
                             </div>
                           </div>
                         }
                         <div className="grid grid-cols-2 text-gray-400 mt-4">Facturas Pendientes: </div>
                         {
                           user?.Facturas?.map((factura: FacturaInt) => {
-                            const isInCart = carShop.some((item) => item.id === factura.id);
+                            const isInCart = carShop.some((item) => item.id === factura.id) && facturasAgregadas.some(item => item === factura.idfactura);
                             return (
-                              <div key={factura.id} className={`${user?.recargo ? 'bg-rose-500' : 'bg-slate-600'} p-2 rounded-lg grid grid-cols-4 text-center text-xs justify-center items-center`}>
+                              <div key={factura.idfactura} className={`${user?.recargo ? 'bg-rose-500' : 'bg-slate-600'} p-2 rounded-lg grid grid-cols-4 text-center text-xs justify-center items-center mb-2`}>
                                 <div>{factura?.fecha}</div>
                                 <div>{factura?.titulo}</div>
                                 <div>${factura?.precio}</div>
                                 { !isInCart && 
-                                  <div className="flex justify-center items-center cursor-pointer" onClick={() => addCarShop({ id: factura.id, fecha: factura?.fecha, titulo: factura?.titulo, precio: factura?.precio, cantidad: 1, type: 'paquete' })}>
+                                  <div className="flex justify-center items-center cursor-pointer" onClick={() => addCarShop({ id: factura.id, fecha: factura?.fecha, titulo: factura?.titulo, precio: factura?.precio, cantidad: 1, type: 'paquete', idfactura: factura.idfactura })}>
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
                                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                                     </svg>
@@ -344,7 +351,7 @@ function Cobranza() {
               <label className="block mt-4 text-gray-400 text-sm" htmlFor="payment-method">
                 Método de Pago
               </label>
-              <select className="w-full border p-2 rounded text-black mb-4" id="payment-method" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
+              <select className="border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" id="payment-method" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
                 <option value="Efectivo">Efectivo</option>
                 <option value="TarjetaDC">Tarjeta Débito/Crédito</option>
                 <option value="Deposito">Depósito</option>
