@@ -113,7 +113,7 @@ export default function Customers() {
 
   const handleRegisterPay = (user: User[]) => {
     sessionStorage.setItem("selectedUser", JSON.stringify(user));
-    router.push("/cobranza");
+    router.replace("/dashboard/cobranza");
   };
 
   const handleFilter = useCallback((item: string) => {

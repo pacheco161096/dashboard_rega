@@ -1,32 +1,24 @@
 // /components/ProtectedRoute.tsx
 
-'use client';  // Esto marca el archivo como un componente de cliente
+'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 
-const ProtectedRoute = ({ children }) => {
-  // const router = useRouter();
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    // Asegúrate de que el código solo se ejecute en el cliente
-    setIsClient(true);
-  }, []);
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const router = useRouter();
+  const [isAuth, setIsAuth] = useState<boolean | null>(null);
 
   useEffect(() => {
-    if (isClient) {
-      const userLogin = sessionStorage.getItem('loginUser'); // Reemplaza con la lógica de tu sesión
-      if (!userLogin) {
-       // router.push('/login'); // Redirige si no hay sesión
-      }
+    const loginUser = sessionStorage.getItem('loginUser');
+    if (!loginUser) {
+      router.replace('/'); // Evita usar push para prevenir el historial de navegación no deseado
+    } else {
+      setIsAuth(true);
     }
-  }, [isClient]);
+  }, [router]);
 
-  // Si estamos en el cliente y el usuario no está autenticado, no mostramos nada hasta que se haya hecho la redirección
-  if (!isClient) {
-    return null; // No renderizamos nada en el servidor
-  }
+  if (isAuth === null) return <p>Verificando autenticación...</p>;
 
   return <>{children}</>;
 };

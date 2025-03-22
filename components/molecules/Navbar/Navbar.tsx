@@ -7,25 +7,25 @@ import { usePathname } from "next/navigation";
 export const Navbar = () => {
   const nameLinks = [{
     name:'Home',
-    href:'./',
+    href:'/dashboard',
     tooltip:'Home',
     icon:<HomeIcon size={20}/>
   },
   {
     name:'Clientes',
-    href:'./customers',
+    href:'/dashboard/customers',
     tooltip:'Clientes',
     icon:<PeopleIcon size={20}/>
   },
   {
     name:'Almacen',
-    href:'./almacen',
+    href:'/dashboard/almacen',
     tooltip:'Almacen',
     icon:<PackageIcon  size={20}/>
   },
   {
     name:'Cobranza',
-    href:'./cobranza',
+    href:'/dashboard/cobranza',
     tooltip:'Cobranza', 
     icon:<CreditCardIcon  size={20}/>
   }
