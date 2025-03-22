@@ -8,11 +8,11 @@
 }
 
 .Cobranza-cashInit {
-  @apply flex justify-evenly w-2/3;
+  @apply flex  justify-between w-2/3 pr-4;
 }
 
 .Cobranza-actions {
-  @apply flex justify-around w-1/3 border-l-2;
+  @apply flex justify-between w-1/3 border-l-2 px-4;
 }
 
 .Cobranza-container {

@@ -1,9 +1,9 @@
 .background {
-    @apply bg-gray-800 flex h-screen;
+    @apply bg-gray-900 flex h-screen items-stretch;
 }
 
 .container {
-    @apply flex flex-col items-center  w-full p-6;
+    @apply flex flex-col items-center w-full p-4;
 }
 
 .header {
@@ -20,5 +20,5 @@
 }
 
 .main {
-    @apply w-full bg-white min-h-96 rounded-md shadow-lg p-5; 
+    @apply w-full h-full rounded-md shadow-xl p-5 bg-gray-800; 
 }

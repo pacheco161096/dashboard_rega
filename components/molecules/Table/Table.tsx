@@ -4,7 +4,7 @@ import {  CreditCardIcon, PencilIcon } from '@primer/octicons-react'
 
 import s from './Table.module.css'
 
-import { User } from "@/app/customers/page"
+import { User } from "@/app/dashboard/customers/page"
 
 interface TableProps {
   data: User[] | undefined; // Siempre será un array, evita `undefined`

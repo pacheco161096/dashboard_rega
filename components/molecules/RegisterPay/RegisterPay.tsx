@@ -8,7 +8,7 @@ import { Input } from "@/components/atoms/Input/Input";
 
 import axios from "axios";
 
-import { User } from "@/app/customers/page"
+import { User } from "@/app/dashboard/customers/page"
 
 export interface RegisterPayProps {
   selectedUser:  User[] | undefined;

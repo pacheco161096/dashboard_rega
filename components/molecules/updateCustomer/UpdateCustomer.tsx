@@ -3,7 +3,7 @@
 import { FC, useCallback, useState } from "react";
 import s from "./UpdateCustomer.module.css";
 import { Input } from "@/components/atoms/Input/Input";
-import { User } from "@/app/customers/page";
+import { User } from "@/app/dashboard/customers/page";
 
 export interface UpdateCustomerProps {
   data: User[] | null;

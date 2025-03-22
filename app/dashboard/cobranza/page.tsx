@@ -154,15 +154,18 @@ function Cobranza() {
       {/* Header */}
       <div className={s["Cobranza-header"]}>
         <div className={s["Cobranza-cashInit"]}>
-          <h1 className="text-xl font-semibold">
+          <h1 className="text-xl font-semibold text-white">
             Cobranza
           </h1>
           <div className={s["Cobranza-search"]}>
-            <input
-              type="text"
-              placeholder="Buscar producto"
-              className="outline-1 px-2 py-1 bg-transparent ml-2 w-full"
-            />
+            <div className="w-[300px] h-10 border border-gray-900 rounded-lg flex p-2">
+              <input type="number" pattern="[0-9]*" name='userId' required className="bg-transparent border-none outline-none w-[90%] h-full  [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-moz-appearance:textfield]" placeholder="Buscar Producto" />
+              <button>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                </svg>
+              </button>
+            </div>
           </div>
           <button className="bg-gray-500 text-white px-2 py-1 rounded-md">
             🏦 Abrir caja
@@ -187,9 +190,9 @@ function Cobranza() {
       <div className={s["Cobranza-container"]}>
         {/* Sección de productos */}
         <div className={s["Cobranza-products"]}>
-          <button className="border border-black rounded-lg flex flex-col items-center justify-center p-6 h-60 w-40">
+          <button className="border border-gray-900 rounded-lg flex flex-col items-center justify-center p-6 h-60 w-40">
             <span className="text-xl">➕</span>
-            <span className="text-md">
+            <span className="text-base text-gray-900 font-bold">
               Crear producto
             </span>
           </button>
@@ -252,7 +255,7 @@ function Cobranza() {
                           }} 
                         className="mb-2"
                     >
-                      <label className="block mt-4 text-gray-400 text-sm">
+                        <label className="block mt-4 text-gray-400 text-sm">
                           Buscar Cliente
                         </label>
                         <div className="w-full h-10 border border-gray-900 rounded-lg flex p-2">

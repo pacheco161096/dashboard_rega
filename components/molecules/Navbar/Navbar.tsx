@@ -1,47 +1,52 @@
+'use client'
 import { NavItem } from '@/components'
 import s from './Navbar.module.css'
 import { HomeIcon,PeopleIcon,PackageIcon,CreditCardIcon   } from '@primer/octicons-react'
+import { usePathname } from "next/navigation";
 
 export const Navbar = () => {
   const nameLinks = [{
     name:'Home',
     href:'./',
     tooltip:'Home',
-    icon:<HomeIcon size={28}/>
+    icon:<HomeIcon size={20}/>
   },
   {
     name:'Clientes',
     href:'./customers',
     tooltip:'Clientes',
-    icon:<PeopleIcon size={30}/>
+    icon:<PeopleIcon size={20}/>
   },
   {
     name:'Almacen',
     href:'./almacen',
     tooltip:'Almacen',
-    icon:<PackageIcon  size={30}/>
+    icon:<PackageIcon  size={20}/>
   },
   {
     name:'Cobranza',
     href:'./cobranza',
     tooltip:'Cobranza', 
-    icon:<CreditCardIcon  size={30}/>
+    icon:<CreditCardIcon  size={20}/>
   }
-]
+  ]
+  const pathname = usePathname();
+
   return (
     <>
       <aside className={s.asideDesktop}>
         <nav className={s.nav}>
+          <div className='font-bold'>REGATELECOM</div>
           {
-            nameLinks && nameLinks.map((item)=>(
-              <NavItem
+            nameLinks && nameLinks.map((item)=>{
+              return (<NavItem
                 key={item.name}
                 href={item.href}
-                tooltip={item.tooltip}              
+                tooltip={item.tooltip}          
               >
-                {item.icon && item.icon}<span className={s.nameLink}>{item.name}</span>
+                <span>{item.icon && item.icon}</span><span className={`text-base ${item.href !== `.${pathname}` ? 'text-gray-400' : 'text-white font-bold'}`}>{item.name}</span>
               </NavItem>
-            ))
+            )})
           }
           </nav>
       </aside>
