@@ -1,31 +1,32 @@
 'use client'
 
 import { useState, useEffect, useCallback } from "react";
-import { Button, Modal, SearchBox, Table, CreateCustomer, UpdateCustomer, RegisterPay } from "@/components";
+import { Button, Modal, SearchBox, Table, CreateCustomer, UpdateCustomer} from "@/components";
 import axios from 'axios';
 import s from './customers.module.css'
 import { useRouter } from "next/navigation";
 
-export interface Role {
+export type Role = {
   id: number;
   name: string;
   description: string;
   type: string;
   createdAt: string;
   updatedAt: string;
-}
+};
 
-export interface Factura {
-  precio: ReactNode;
-  titulo: ReactNode;
+export type Factura = {
   id: number;
   fecha: string;
   pagado: boolean;
   id_paquete: string;
-}
+  idTransaccion: string | null;
+  titulo: string;
+  precio: number;
+  idfactura: string;
+};
 
-export interface User {
-  recargo: ReactNode;
+export type User = {
   id: number;
   username: string;
   email: string;
@@ -54,9 +55,11 @@ export interface User {
   createdAt: string;
   updatedAt: string;
   id_mikrotik: string;
+  recargo: boolean;
   role: Role;
   Facturas: Factura[];
-}
+  paqueteActual: any;
+};
 
 export default function Customers() {
 
@@ -100,6 +103,7 @@ export default function Customers() {
   }, [showModalClient])
 
   const handleUpdateCliente = useCallback((data: User[]) => {  
+    console.log('data',data)
       setUpdateCliente(data)
     setIsNewCliente(false);
     setShowModalClient(prev => !prev);
