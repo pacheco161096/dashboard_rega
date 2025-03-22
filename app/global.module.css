@@ -20,5 +20,5 @@
 }
 
 .main {
-    @apply w-full h-full rounded-md shadow-xl p-5 bg-gray-800; 
+    @apply w-full h-full rounded-md shadow-xl p-5 bg-white; 
 }

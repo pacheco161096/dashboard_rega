@@ -44,7 +44,7 @@ export const Navbar = () => {
                 href={item.href}
                 tooltip={item.tooltip}          
               >
-                <span>{item.icon && item.icon}</span><span className={`text-base ${item.href !== `.${pathname}` ? 'text-gray-400' : 'text-white font-bold'}`}>{item.name}</span>
+                <span>{item.icon && item.icon}</span><span className={`text-base ${item.href !== `.${pathname}` ? 'text-gray-900' : 'text-white font-bold'}`}>{item.name}</span>
               </NavItem>
             )})
           }
