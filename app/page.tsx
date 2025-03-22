@@ -3,9 +3,11 @@ import React, { useState } from 'react'
 import Image from 'next/image'
 import logo from '../media/logo.png'
 import axios from 'axios'
+import { useRouter } from 'next/navigation'
 
 const Page = ({}) => {
   const [error, setError] = useState<string | null>(null); // Ahora el estado es un string o null
+  const router = useRouter();
 
   const login = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -14,7 +16,7 @@ const Page = ({}) => {
 
     try {
       const response = await axios.get(
-        `http://localhost:1337/api/usuarios?filters[usuario][$eq]=${user}&filters[contrasena][$eq]=${password}`
+        `https://monkfish-app-2et8k.ondigitalocean.app/api/usuarios?filters[usuario][$eq]=${user}&filters[contrasena][$eq]=${password}`
       )
       if (response.data?.data?.length > 0) {
         const { data } = response.data
@@ -25,6 +27,7 @@ const Page = ({}) => {
         }
         sessionStorage.setItem("loginUser", JSON.stringify(loginUser));
         setError(null); // Limpia el error si el login es exitoso
+        router.replace('/dashboard');
       } else {
         setError("ErrorData");
       }
@@ -56,10 +59,10 @@ const Page = ({}) => {
         <button className='bg-indigo-600 text-white px-4 py-2 rounded w-full'>
           Iniciar Sesión
         </button>
-        {error == 'ErrorData' ? <div className='text-red-500'>Revisa tu información</div> : <div className='text-red-500'>Error en el servidor</div>}
+        { error == 'ErrorData' && <div className='text-red-500'>Revisa tu información</div> }
       </form>
     </div>
   )
 }
 
-export default Page
+export default Page;

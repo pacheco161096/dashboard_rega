@@ -4,6 +4,7 @@ import { Navbar } from "@/components";
 import s from '../global.module.css'
 import { PersonFillIcon,SignOutIcon } from '@primer/octicons-react'
 import ProtectedRoute from '@/components/ProtectedRoute'
+import InfoClient from "@/components/molecules/InfoClient/InfoClient";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -27,15 +28,7 @@ export default function RootLayout({
             <main className={s.main}>
             <header className={s.header}>
               <h1 className={s.h1}>Sección</h1>
-              <div className={s.contentUser}>
-                <div>
-                  <PersonFillIcon size={24} />
-                  <span>Noé Aviles</span>
-                </div>
-                <div>
-                  <SignOutIcon size={24} className={s.iconSinOut} />
-                </div>
-              </div>
+              <InfoClient />
             </header>
             {children}
             </main>

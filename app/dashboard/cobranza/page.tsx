@@ -129,7 +129,7 @@ function Cobranza() {
   const sendPay = async () => {
     try {
 
-      const response = await axios.post('http://localhost:1337/api/payment',
+      const response = await axios.post('https://monkfish-app-2et8k.ondigitalocean.app/api/payment',
       {
         idusuario: user?.id,
         carshop: carShop, 
@@ -168,12 +168,14 @@ function Cobranza() {
           <button
             className={isOpenCaja ? s["Cobranza-buttonVenta"] : s["Cobranza-buttonDisVentaGast"]}
             onClick={() => openDrawerVenta()}
+            disabled={ !isOpenCaja }
           >
             ✅ Nueva venta
           </button>
           <button
             className={isOpenCaja ? s["Cobranza-buttonGasto"] : s["Cobranza-buttonDisVentaGast"]}
             onClick={() => setOpenGasto(true)}
+            disabled={ !isOpenCaja }
           >
             ❌ Nuevo gasto
           </button>
