@@ -4,6 +4,8 @@ import s from "./cobranza.module.css";
 import Drawer from "@mui/material/Drawer";
 import { Factura, User } from "../customers/page";
 import axios from 'axios';
+import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 export interface ItemCarInt {
   idfactura: string;
@@ -15,8 +17,6 @@ export interface ItemCarInt {
   fecha: string;
 }
 
-
-
 function Cobranza() {
   const [openVenta, setOpenVenta] = useState(false);
   const [openGasto, setOpenGasto] = useState(false);
@@ -27,6 +27,8 @@ function Cobranza() {
   const [currentDate, setCurrentDate] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("Efectivo");
   const [isOpenCaja, setIsOpenCaja] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     const selectedUser = sessionStorage.getItem("selectedUser");
@@ -127,18 +129,29 @@ function Cobranza() {
   }, 0);
 
   const sendPay = async () => {
+    setIsLoading(true);
     try {
-
       const response = await axios.post('https://monkfish-app-2et8k.ondigitalocean.app/api/payment',
       {
         idusuario: user?.id,
         carshop: carShop, 
         metodo: paymentMethod,
       });
-      //setUser(response.data);
+      
+      const { pagoexitoso, id } = response.data;
+
+      if (pagoexitoso) {
+        toast({
+          title: "Pago exitoso",
+          description: "Tu pago se ha procesado correctamente.",
+        });
+        fetchDataUser(id);
+      }
+      
     } catch (err) {
       console.log('error' + err)
     } finally {
+      setIsLoading(false);
     }
   }
 
@@ -287,21 +300,25 @@ function Cobranza() {
                       </div>
                       <div className="flex flex-col">
                         <div className="grid grid-cols-2 text-gray-400">Paquete Actual: </div>
-                        {/* {
-                          <div key={user.paqueteActual.id} className='bg-slate-600 p-2 rounded-lg grid grid-cols-4 text-center text-xs justify-center items-center'>
-                            <div>{user.paqueteActual.titulo}</div>
-                            <div></div>
+                        {
+                          <div key={user.paqueteActual?.id} className='bg-slate-600 p-2 rounded-lg grid grid-cols-2 text-center text-xs justify-center items-center'>
+                            <div>{user.paqueteActual?.titulo}</div>
                             <div>${user.paqueteActual?.precio}</div>
-                            <div className="flex justify-center items-center cursor-pointer">
-                            </div>
                           </div>
-                        } */}
+                        }
                         <div className="grid grid-cols-2 text-gray-400 mt-4">Facturas Pendientes: </div>
                         {
-                          user?.Facturas?.map((factura: Factura) => {
+                          user?.Facturas?.map((factura: Factura, i) => {
                             const isInCart = carShop.some((item) => item.id === factura.id);
+                            const statusItemCarClass = cn(
+                              {
+                                'bg-rose-500': user.recargo,
+                                'bg-slate-600': !user.recargo,
+                              }
+                            );
+
                             return (
-                              <div key={factura.idfactura} className={`${user?.recargo ? 'bg-rose-500' : 'bg-slate-600'} p-2 rounded-lg grid grid-cols-4 text-center text-xs justify-center items-center mb-2`}>
+                              <div key={ i } className={`${statusItemCarClass} p-2 rounded-lg grid grid-cols-4 text-center text-xs justify-center items-center mb-2`}>
                                 <div>{factura?.fecha}</div>
                                 <div>{factura?.titulo}</div>
                                 <div>${factura?.precio}</div>
@@ -372,8 +389,13 @@ function Cobranza() {
               </select>
             </div>
             }
-            <button className={carShop.length > 0 ? s["Cobranza-buttonPay"] : s["Cobranza-buttonDisable"]} disabled={carShop.length == 0} onClick={() => sendPay()}>
-              Pagar
+            <button className={(carShop.length == 0 || isLoading) ? s["Cobranza-buttonDisable"] : s["Cobranza-buttonPay"]} disabled={ carShop.length == 0 || isLoading } onClick={() => sendPay()}>
+              { !isLoading
+                ?
+                'Pagar'
+                :
+                'Pagando...'
+              }
             </button>
             <button className="bg-rose-500 text-white px-4 py-2 mt-4 rounded w-full" onClick={() => closeDrawerVenta()}>
               Cancelar

@@ -58,8 +58,14 @@ export type User = {
   recargo: boolean;
   role: Role;
   Facturas: Factura[];
-  paqueteActual: string;
+  paqueteActual: CurrentPlan;
 };
+
+export type CurrentPlan = {
+  id: string;
+  titulo: string;
+  precio: number;
+}
 
 export default function Customers() {
 
