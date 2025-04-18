@@ -39,8 +39,8 @@ export const Table: FC<TableProps> = ({ data, handleUpdateCliente, handleRegiste
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data?.map((user) => (
-            <TableRow key={user.id} className="border-b">
+          {data?.map((user, i) => (
+            <TableRow key={ i } className="border-b">
               <TableCell>{user.id}</TableCell>
               <TableCell>{user.nombre}</TableCell>
               <TableCell>{user.email}</TableCell>
