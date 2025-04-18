@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from "react";
-import { Button, Modal, SearchBox, Table, CreateCustomer, UpdateCustomer} from "@/components";
+import { Button, SearchBox, Table, CreateCustomer, UpdateCustomer} from "@/components/index";
 import axios from 'axios';
 import s from './customers.module.css'
 import { useRouter } from "next/navigation";
@@ -58,7 +58,7 @@ export type User = {
   recargo: boolean;
   role: Role;
   Facturas: Factura[];
-  paqueteActual: any;
+  paqueteActual: string;
 };
 
 export default function Customers() {
@@ -103,7 +103,6 @@ export default function Customers() {
   }, [showModalClient])
 
   const handleUpdateCliente = useCallback((data: User[]) => {  
-    console.log('data',data)
       setUpdateCliente(data)
     setIsNewCliente(false);
     setShowModalClient(prev => !prev);
@@ -129,15 +128,10 @@ export default function Customers() {
 
   return (
     <div className="">
-      {
-        showModalClient == true &&
-        <Modal handleModal={handleModalClient}>
-          {isNewCliente ? <CreateCustomer handleModal={handleModalClient} /> : <UpdateCustomer  data={ updateCliente ? updateCliente : null } />}
-        </Modal>
-      }
-
+      {isNewCliente ? <CreateCustomer open={showModalClient} onOpenChange={handleModalClient} /> : <UpdateCustomer  data={ updateCliente ? updateCliente : null } />}
       <div className={s.header}>
         <Button onClick={handleNewCliente} variant="primary" size="md">Nuevo Cliente</Button>
+   
         <SearchBox handleFilter={handleFilter} />
       </div>
 

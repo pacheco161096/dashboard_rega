@@ -1,5 +1,8 @@
+.body {
+    @apply bg-gray-900 antialiased font-roboto;
+}
 .background {
-    @apply bg-gray-900 flex h-screen items-stretch;
+    @apply flex h-auto items-stretch;
 }
 
 .container {
@@ -20,5 +23,5 @@
 }
 
 .main {
-    @apply w-full h-full rounded-md shadow-xl p-5 bg-white; 
+    @apply w-full h-auto rounded-md shadow-xl p-5 bg-white; 
 }

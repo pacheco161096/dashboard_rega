@@ -1,108 +1,88 @@
+"use client"
+
 import { FC } from "react"
-
-import {  CreditCardIcon, PencilIcon } from '@primer/octicons-react'
-
-import s from './Table.module.css'
+import { CreditCardIcon, PencilIcon } from "@primer/octicons-react"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import {
+  Table as ShadTable,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 
 import { User } from "@/app/dashboard/customers/page"
 
 interface TableProps {
-  data: User[] | undefined; // Siempre será un array, evita `undefined`
-  handleUpdateCliente: (user: User[]) => void; // Recibe un usuario y no retorna nada
-  handleRegisterPay: (user: User[]) => void; // Recibe un usuario y no retorna nada
+  data: User[] | undefined
+  handleUpdateCliente: (user: User[]) => void
+  handleRegisterPay: (user: User[]) => void
 }
 
-export interface itemPay {
-  id: string;
-}
-export interface itemProps {
-  id:string
-  nombre:string
-  email:string
-  celular:string
-  localidad:string
-  tipo_servicio_paquete:string
-  estatus_servicio:boolean
-}
-
-export const Table:FC<TableProps> = (props) => {
-
-  const { data, handleUpdateCliente, handleRegisterPay } = props;
-
+export const Table: FC<TableProps> = ({ data, handleUpdateCliente, handleRegisterPay }) => {
   return (
-    <div className={s.container}>
-      <div className={s.contenTable}>
-        <table className={s.table}>
-          <thead className={s.thead}>
-            <tr>
-              <td className="px-4 py-3 font-bold">No. Contrato</td>
-              <td className="px-4 py-3 font-bold">Nombre</td>
-              <td className="px-4 py-3 font-bold">Correo</td>
-              <td className="px-4 py-3 font-bold">Telefono</td>
-              <td className="px-4 py-3 font-bold">Localidad</td>
-              <td className="px-4 py-3 font-bold">Tipo de servicio</td>
-              <td className="px-4 py-3 font-bold">Status</td>
-              <td className="px-4 py-3 font-bold">Pagar</td>
-              <td className="px-4 py-3 font-bold">Editar</td>
-            </tr>
-          </thead>
-          <tbody className={s.tbody}>
-            {
-              data && data?.map( (item,i) => (
-              <tr key={i}>
-                <td className={s.td}>
-                  <span className={s.span}>{item.id}</span>
-                </td>
-                <td className={s.td}>
-                  <span className={s.span}>{ item.nombre }</span>
-                </td>
-                <td className={s.td}>
-                  <span className={s.span}>{ item.email }</span>
-                </td>
-                <td className={s.td}>
-                  <span className={s.span}>{ item.celular }</span>
-                </td>
-                <td className={s.td}>
-                  <span className={s.span}>{ item.localidad }</span>
-                </td>
-                <td className={s.td}>
-                 <span className={s.span}> { item.tipo_servicio_paquete } </span>
-                </td>
-                <td className={s.td}>
-                  <span className={ `inline-flex px-2 text-xs font-medium leading-5 rounded-full  ${ item.estatus_servicio === true ? 'text-green-700  bg-green-100' : 'text-red-100 bg-red-700'}` }> { item.estatus_servicio == true ? "Activo" : "Suspendido" } </span>
-                </td>
-                <td className={s.td}>
-                  <span onClick={() => handleRegisterPay([item])} className={s.btnPay}> <CreditCardIcon size={24} fill="#ffffff" /> </span>
-                </td>
-                <td className={s.td}>
-                  <span onClick={() => handleUpdateCliente([item])} className={s.btnEdit}> <PencilIcon size={24} fill="#ffffff" /> </span>
-                </td>
-            </tr>
-              ) )
-            }
-          </tbody>
-        </table>
-      </div>
-      <div className="flex flex-col justify-between text-xs sm:flex-row text-gray-600 mt-3">
-        <span className="flex items-center font-semibold tracking-wide">
-          Usuarios 1 - 8 de 50
-        </span>
-        <div className="flex mt-2 sm:mt-auto sm:justify-end">
-          <nav>
-            <ul className="inline-flex items-center">
-              <li>
-                <button className="align-bottom inline-flex items-center justify-center cursor-pointer leading-5 transition-colors duration-150 font-medium focus:outline-none px-3 py-1 rounded-md text-xs text-white bg-blue-600 border border-transparent active:bg-blue-600 hover:bg-blue-500 focus:shadow-outline-purple">1</button>
-              </li>
-              <li>
-                <button className="align-bottom inline-flex items-center justify-center cursor-pointer leading-5 transition-colors duration-150 font-medium focus:outline-none px-3 py-1 rounded-md text-xs text-gray-600 focus:outline-none border border-transparent active:bg-transparent hover:bg-gray-100 focus:shadow-outline-gray">2</button>
-              </li>
-              <li>
-                <button className="align-bottom inline-flex items-center justify-center cursor-pointer leading-5 transition-colors duration-150 font-medium focus:outline-none px-3 py-1 rounded-md text-xs text-gray-600 focus:outline-none border border-transparent active:bg-transparent hover:bg-gray-100 focus:shadow-outline-gray">3</button>
-              </li>
-            </ul>
-          </nav>
-        </div>
-      </div>
+    <div className="border rounded-lg overflow-hidden">
+      <ShadTable>
+        <TableHeader>
+          <TableRow className="bg-muted/50">
+            <TableHead className="font-semibold">NO. CONTRATO</TableHead>
+            <TableHead className="font-semibold">NOMBRE</TableHead>
+            <TableHead className="font-semibold">CORREO</TableHead>
+            <TableHead className="font-semibold">TELÉFONO</TableHead>
+            <TableHead className="font-semibold">LOCALIDAD</TableHead>
+            <TableHead className="font-semibold">TIPO DE SERVICIO</TableHead>
+            <TableHead className="font-semibold">STATUS</TableHead>
+            <TableHead className="font-semibold">PAGAR</TableHead>
+            <TableHead className="font-semibold">EDITAR</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {data?.map((user) => (
+            <TableRow key={user.id} className="border-b">
+              <TableCell>{user.id}</TableCell>
+              <TableCell>{user.nombre}</TableCell>
+              <TableCell>{user.email}</TableCell>
+              <TableCell>{user.celular}</TableCell>
+              <TableCell>{user.localidad}</TableCell>
+              <TableCell>{user.tipo_servicio_paquete}</TableCell>
+              <TableCell>
+                <Badge
+                  variant={user.estatus_servicio ? "outline" : "destructive"}
+                  className={
+                    user.estatus_servicio
+                      ? "bg-green-100 text-green-800 hover:bg-green-100 border-green-200"
+                      : "bg-red-700 text-white hover:bg-red-800"
+                  }
+                >
+                  {user.estatus_servicio ? "Activo" : "Suspendido"}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9 bg-blue-700 text-white hover:bg-blue-800"
+                  onClick={() => handleRegisterPay([user])}
+                >
+                  <CreditCardIcon size={16} />
+                </Button>
+              </TableCell>
+              <TableCell>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9 bg-yellow-500 text-white hover:bg-yellow-600"
+                  onClick={() => handleUpdateCliente([user])}
+                >
+                  <PencilIcon size={16} />
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </ShadTable>
     </div>
-      )
+  )
 }

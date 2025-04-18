@@ -2,102 +2,182 @@
 
 import { FC, useState, useCallback } from "react";
 import s from "./CreateCustomer.module.css";
-import { Input } from "@/components/atoms/Input/Input";
+import { Button } from "@/components/ui/button";
 import axios from "axios";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export interface CreateCustomerProps {
-  handleModal: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-export const CreateCustomer: FC<CreateCustomerProps> = ({ handleModal }) => {
-  const [dataUser, setdataUser] = useState({
-    password: "123456789",
-    confirmed: true,
-    blocked: false,
-    estatus_servicio: true,
-    username: "",
-  });
+const initialUserData = {
+  nombre: "",
+  apellido: "",
+  email: "",
+  username: "",
+  rfc: "",
+  celular: "",
+  curp: "",
+  razon_social: "",
+  regimen_fiscal: "",
+  cfdi: "",
+  colonia: "",
+  codigo_postal: "",
+  calle: "",
+  num_exterior: "",
+  num_interior: "",
+  ciudad: "",
+  localidad: "",
+  estado: "",
+  pais: "",
+  tipo_servicio_paquete: "",
+  ip_address: "",
+  tipo_servicio: "",
+  id_mikrotik: "",
+};
 
-  const handleInput = useCallback((name: string, value: string) => {
-    setdataUser((prev) => ({
+const dataInput = [
+  // Datos Personales
+  { name: "nombre", required: true, placeholder: "Nombre", type: "text", section: "personales" },
+  { name: "apellido", required: true, placeholder: "Apellido", type: "text", section: "personales" },
+  { name: "email", required: true, placeholder: "Correo", type: "email", section: "personales" },
+  { name: "celular", required: false, placeholder: "Celular", type: "tel", section: "personales" },
+  { name: "calle", required: false, placeholder: "Calle", type: "text", section: "direccion" },
+  { name: "colonia", required: false, placeholder: "Colonia", type: "text", section: "direccion" },
+  { name: "codigo_postal", required: false, placeholder: "Código Postal", type: "text", section: "direccion" },
+  { name: "num_exterior", required: false, placeholder: "Num. Exterior", type: "text", section: "direccion" },
+  { name: "num_interior", required: false, placeholder: "Num. Interior", type: "text", section: "direccion" },
+  { name: "ciudad", required: false, placeholder: "Ciudad", type: "text", section: "direccion" },
+  { name: "localidad", required: false, placeholder: "Localidad", type: "text", section: "direccion" },
+  { name: "estado", required: false, placeholder: "Estado", type: "text", section: "direccion" },
+  { name: "pais", required: false, placeholder: "País", type: "text", section: "direccion" },
+
+  // Datos Fiscales
+  { name: "rfc", required: false, placeholder: "R.F.C", type: "text", section: "fiscales" },
+  { name: "curp", required: false, placeholder: "CURP", type: "text", section: "fiscales" },
+  { name: "razon_social", required: false, placeholder: "Razón Social", type: "text", section: "fiscales" },
+  { name: "regimen_fiscal", required: false, placeholder: "Régimen Fiscal", type: "text", section: "fiscales" },
+  { name: "cfdi", required: false, placeholder: "Uso CFDI", type: "text", section: "fiscales" },
+
+  // Servicio
+  { name: "tipo_servicio_paquete", required: false, placeholder: "Paquete", type: "text", section: "servicio" },
+  { name: "ip_address", required: false, placeholder: "IP", type: "text", section: "servicio" },
+  { name: "id_mikrotik", required: false, placeholder: "Mrikotik", type: "text", section: "servicio" },
+  { name: "listado_region", required: false, placeholder: "listado region", type: "text", section: "servicio" },
+
+];
+
+export const CreateCustomer: FC<CreateCustomerProps> = ({ open, onOpenChange }) => {
+  const [dataUser, setDataUser] = useState(initialUserData);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setDataUser(prev => ({
       ...prev,
       [name]: value,
-      username: name === "email" ? value : prev.username,
+      ...(name === "email" ? { username: value } : {})
     }));
-  }, []);
-
-  const postData = async (url: string, data: object) => {
-    try {
-      const response = await axios.post(url, data);
-      console.log("Usuario creado:", response.data);
-    } catch (error) {
-      console.error("Error al crear usuario:", error);
-    }
   };
 
   const handleSubmit = useCallback(
     async (event: React.FormEvent) => {
       event.preventDefault();
-      await postData(
-        "https://monkfish-app-2et8k.ondigitalocean.app/api/auth/local/register",
-        dataUser
-      );
-      handleModal();
+
+      const payload = {...dataUser,
+        ...({  password: "123456789",
+          confirmed: true,
+          blocked: false,
+          estatus_servicio: true,
+        role: "2",})
+        }
+      try {
+        await axios.post(
+          "https://monkfish-app-2et8k.ondigitalocean.app/api/auth/local/register",
+          payload
+        );
+        console.log("Usuario creado con éxito.");
+        onOpenChange(false);
+      } catch (error) {
+        console.error("Error al crear usuario:", error);
+      }
     },
-    [dataUser, handleModal]
+    [dataUser, onOpenChange]
   );
 
-  const dataInput = [
-    // Datos Personales
-    { name: "nombre", required: true, placeHolder: "Nombre", type: "text" },
-    { name: "apellido", required: true, placeHolder: "Apellido", type: "text" },
-    { name: "email", required: true, placeHolder: "Correo", type: "email" },
-    { name: "celular", required: false, placeHolder: "Celular", type: "tel" },
-  
-    // Datos Fiscales
-    { name: "rfc", required: false, placeHolder: "R.F.C", type: "text" },
-    { name: "curp", required: false, placeHolder: "CURP", type: "text" },
-    { name: "razon_social", required: false, placeHolder: "Razón Social", type: "text" },
-    { name: "regimen_fiscal", required: false, placeHolder: "Régimen Fiscal", type: "text" },
-    { name: "cfdi", required: false, placeHolder: "Uso CFDI", type: "text" },
-  
-    // Dirección
-    { name: "calle", required: false, placeHolder: "Calle", type: "text" },
-    { name: "colonia", required: false, placeHolder: "Colonia", type: "text" },
-    { name: "codigo_postal", required: false, placeHolder: "Código Postal", type: "text" },
-    { name: "num_exterior", required: false, placeHolder: "Num. Exterior", type: "text" },
-    { name: "num_interior", required: false, placeHolder: "Num. Interior", type: "text" },
-    { name: "ciudad", required: false, placeHolder: "Ciudad", type: "text" },
-    { name: "localidad", required: false, placeHolder: "Localidad", type: "text" },
-    { name: "estado", required: false, placeHolder: "Estado", type: "text" },
-    { name: "pais", required: false, placeHolder: "País", type: "text" },
-  
-    // Servicio
-    { name: "tipo_servicio_paquete", required: false, placeHolder: "Paquete", type: "text" },
-  ];
-  
+  const renderFields = (section: string) =>
+    dataInput
+      .filter(item => item.section === section)
+      .map(item => (
+        <div className="space-y-2" key={item.name}>
+          <Label htmlFor={item.name}>{item.placeholder}</Label>
+          <Input
+            id={item.name}
+            name={item.name}
+            placeholder={item.placeholder}
+            type={item.type}
+            value={dataUser[item.name as keyof typeof dataUser]}
+            onChange={handleChange}
+            required={item.required}
+          />
+        </div>
+      ));
+
   return (
     <div className={s.container}>
-      <form className="w-full p-5 flex flex-col items-center" onSubmit={handleSubmit}>
-        <h2 className="text-3xl mb-5 text-center">Información de usuario</h2>
-        <div className="grid grid-cols-2 gap-4 w-full">
-          {dataInput.map((item) => (
-            <Input
-              key={item.name}
-              name={item.name}
-              funcion={handleInput}
-              required={item.required}
-              placeHolder={item.placeHolder}
-              type={item.type}
-            />
-          ))}
-        </div>
-        <input
-          type="submit"
-          value="Guardar"
-          className="rounded-md bg-blue-600 text-white p-2 w-48 mt-5 cursor-pointer"
-        />
-      </form>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Nuevo Cliente</DialogTitle>
+            <DialogDescription>
+              Complete la información para registrar un nuevo cliente.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit}>
+            <Tabs defaultValue="personales" className="w-full">
+              <TabsList className="grid w-full grid-cols-4 mb-4">
+                <TabsTrigger value="personales">Datos Personales</TabsTrigger>
+                <TabsTrigger value="direccion">Direccion</TabsTrigger>
+                <TabsTrigger value="fiscales">Datos Fiscales</TabsTrigger>
+                <TabsTrigger value="servicio">Servicio</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="personales" className="grid grid-cols-2 gap-4">
+                {renderFields("personales")}
+              </TabsContent>
+              <TabsContent value="direccion" className="grid grid-cols-2 gap-4">
+                {renderFields("direccion")}
+              </TabsContent>
+              <TabsContent value="fiscales" className="grid grid-cols-2 gap-4">
+                {renderFields("fiscales")}
+              </TabsContent>
+              <TabsContent value="servicio" className="grid grid-cols-2 gap-4">
+                {renderFields("servicio")}
+              </TabsContent>
+            </Tabs>
+
+            <DialogFooter className="mt-6">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                Guardar
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

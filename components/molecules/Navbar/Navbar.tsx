@@ -1,5 +1,5 @@
 'use client'
-import { NavItem } from '@/components'
+import { NavItem } from '@/components/atoms/NavItem/NavItem'
 import s from './Navbar.module.css'
 import { HomeIcon,PeopleIcon,PackageIcon,CreditCardIcon   } from '@primer/octicons-react'
 import { usePathname } from "next/navigation";

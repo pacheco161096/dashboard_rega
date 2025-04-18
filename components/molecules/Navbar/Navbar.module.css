@@ -1,5 +1,5 @@
 .asideDesktop {
-    @apply hidden w-52 sm:flex py-4 pl-4 justify-center items-stretch;
+    @apply hidden w-52 sm:flex py-4 pl-4 justify-center items-stretch sticky top-0 h-screen;
 }
 
 .nav {
