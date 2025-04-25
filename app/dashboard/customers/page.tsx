@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from "react";
-import { Button, SearchBox, Table, CreateCustomer, UpdateCustomer} from "@/components/index";
+import { Button, SearchBox, Table, CreateCustomer,CustomerForm} from "@/components/index";
 import axios from 'axios';
 import s from './customers.module.css'
 import { useRouter } from "next/navigation";
@@ -71,6 +71,7 @@ export default function Customers() {
 
   const [showModalClient, setShowModalClient] = useState(false)
   const [updateCliente, setUpdateCliente] = useState<User[]>()
+  const [idCliente, setIdCliente] = useState<string | number>("")
   const [isNewCliente, setIsNewCliente] = useState(false)
 
   const URL = ("https://monkfish-app-2et8k.ondigitalocean.app/api/users?populate=*")
@@ -109,7 +110,8 @@ export default function Customers() {
   }, [showModalClient])
 
   const handleUpdateCliente = useCallback((data: User[]) => {  
-      setUpdateCliente(data)
+    setUpdateCliente(data)
+    setIdCliente(data[0]?.id)
     setIsNewCliente(false);
     setShowModalClient(prev => !prev);
   }, []); // 🔹 Sin dependencias para evitar renders innecesarios
@@ -122,19 +124,31 @@ export default function Customers() {
   };
 
   const handleFilter = useCallback((item: string) => {
-    const user = data && data.filter((a) => a.id === parseInt(item) || a.nombre === item || a.email === item)
-    if (user?.length) {
-      if (JSON.stringify(user) !== JSON.stringify(data)) {
-        setFilterData(user);
-      }
+    if (!data || !item) return;
+  
+    const normalized = item.trim().toLowerCase();
+  
+    const filtered = data.filter((user) => {
+      const matchId = user.id.toString() === normalized;
+      const matchName = user.nombre?.toLowerCase() === normalized;
+      const matchEmail = user.email?.toLowerCase() === normalized;
+      return matchId || matchName || matchEmail;
+    });
+  
+    // Solo actualiza si hay diferencia con el estado actual
+    const isSame = filtered.length === data.length && filtered.every((u, i) => u.id === data[i].id);
+  
+    if (filtered.length && !isSame) {
+      setFilterData(filtered);
     } else {
-      setFilterData([]);
+      setFilterData(data);
     }
-  }, [data])
+  }, [data]);
 
   return (
     <div className="">
-      {isNewCliente ? <CreateCustomer open={showModalClient} onOpenChange={handleModalClient} /> : <UpdateCustomer  data={ updateCliente ? updateCliente : null } />}
+      {isNewCliente ? <CreateCustomer open={showModalClient} onOpenChange={handleModalClient} /> : <CustomerForm open={showModalClient} onOpenChange={handleModalClient} mode="edit" userData={updateCliente ? updateCliente : null} userId={idCliente}/>}
+      
       <div className={s.header}>
         <Button onClick={handleNewCliente} variant="primary" size="md">Nuevo Cliente</Button>
    
