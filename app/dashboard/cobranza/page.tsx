@@ -6,6 +6,15 @@ import { Factura, User } from "../customers/page";
 import axios from 'axios';
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export interface ItemCarInt {
   idfactura: string;
@@ -22,17 +31,36 @@ function Cobranza() {
   const [openGasto, setOpenGasto] = useState(false);
   const [tab, setTabNew] = useState(1);
   const [user, setUser] = useState<User | null>(null);
+  const [employee, setEmployee] = useState<any | null>(null);
   const [carShop, setCarShop] = useState<ItemCarInt[]>([])
   const [facturasAgregadas, setFacturasAgregadas] = useState<number[]>([]);
   const [currentDate, setCurrentDate] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("Efectivo");
   const [isOpenCaja, setIsOpenCaja] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [montoApertura, setMontoApertura] = useState("");
+  const [montoCierre, setMontoCierre] = useState("");
+  const [caja, setCaja] = useState<any>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
+    const employee = sessionStorage.getItem("loginUser");
     const selectedUser = sessionStorage.getItem("selectedUser");
-    if (selectedUser) {
+    const storedCaja = sessionStorage.getItem("caja");
+
+    if (employee) {
+      const parsedEmp = JSON.parse(employee);
+      setEmployee(parsedEmp);
+    }
+    
+    if (storedCaja) {
+      const parsedCaja = JSON.parse(storedCaja);
+      setCaja(parsedCaja);
+      setIsOpenCaja(true);
+    }
+
+    if (selectedUser && isOpenCaja) {
       const parsedUser = JSON.parse(selectedUser);
 
       if (Array.isArray(parsedUser) && parsedUser.length > 0) {
@@ -41,6 +69,8 @@ function Cobranza() {
         setTabNew(2);
         fetchDataUser(parsedUser[0]?.id);
       }
+    } else {
+      alert('La caja aun no está abierta')
     }
 
     const today = new Date().toISOString().split("T")[0];
@@ -155,6 +185,48 @@ function Cobranza() {
     }
   }
 
+  const abrirCaja = () => {
+    const now = new Date();
+    const nuevaCaja = {
+      montoApertura: parseFloat(montoApertura),
+      fechaHoraApertura: now.toISOString(),
+      employeeId: employee?.id,
+    };
+    sessionStorage.setItem("caja", JSON.stringify(nuevaCaja));
+    setCaja(nuevaCaja);
+    setMontoApertura("");
+    setIsOpenCaja(true);
+    setIsDialogOpen(false);
+  };
+
+  const cerrarCaja = async () => {
+    if (!caja) return;
+
+    const now = new Date();
+    const cajaCerrada = {
+      ...caja,
+      montoCierre: parseFloat(montoCierre),
+      fechaHoraCierre: now.toISOString(),
+    };
+
+    console.log('cajaCerrada ', cajaCerrada);
+
+    try {
+      /* await fetch("/api/caja/cerrar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(cajaCerrada),
+      }); */
+      sessionStorage.removeItem("caja");
+      setCaja(null);
+      setMontoCierre("");
+      setIsOpenCaja(false);
+      setIsDialogOpen(false);
+    } catch (err) {
+      console.error("Error al cerrar caja:", err);
+    }
+  };
+
   return (
     <div className={s.Cobranza}>
       {/* Header */}
@@ -173,7 +245,7 @@ function Cobranza() {
               </button>
             </div>
           </div>
-          <button className="bg-gray-500 text-white px-2 py-1 rounded-md" onClick={() => setIsOpenCaja(!isOpenCaja)}>
+          <button className="bg-gray-500 text-white px-2 py-1 rounded-md" onClick={() => setIsDialogOpen(true)}>
             🏦 {!isOpenCaja ? 'Abrir caja' : 'Cerrar caja'}
           </button>
         </div>
@@ -243,6 +315,42 @@ function Cobranza() {
           </div>
         )
       }
+      {/* Dialog Abrir/Cerrar Caja */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{isOpenCaja ? "Cierre de Caja" : "Apertura de Caja"}</DialogTitle>
+            <DialogDescription>
+              {isOpenCaja
+                ? "Ingresa el monto final de cierre:"
+                : "Ingresa el monto inicial de apertura:"}
+            </DialogDescription>
+          </DialogHeader>
+
+          {!isOpenCaja ? (
+            <Input
+              type="number"
+              placeholder="Ej. 1000"
+              value={montoApertura}
+              onChange={(e) => setMontoApertura(e.target.value)}
+            />
+          ) : (
+            <Input
+              type="number"
+              placeholder="Ej. 1500"
+              value={montoCierre}
+              onChange={(e) => setMontoCierre(e.target.value)}
+            />
+          )}
+
+          <Button
+            onClick={!isOpenCaja ? abrirCaja : cerrarCaja}
+            disabled={(!isOpenCaja && !montoApertura) || (isOpenCaja && !montoCierre)}
+          >
+            {!isOpenCaja ? "Abrir Caja" : "Cerrar Caja"}
+          </Button>
+        </DialogContent>
+      </Dialog>
 
       {/* Drawer Nueva Venta */}
       <Drawer anchor="right" open={openVenta} onClose={() => setOpenVenta(false)}>

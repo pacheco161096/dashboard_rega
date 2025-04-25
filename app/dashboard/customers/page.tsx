@@ -117,7 +117,12 @@ export default function Customers() {
   /* Pagos */
 
   const handleRegisterPay = (user: User[]) => {
-    sessionStorage.setItem("selectedUser", JSON.stringify(user));
+    const storedCaja = sessionStorage.getItem("caja");
+
+    if (storedCaja) {
+      sessionStorage.setItem("selectedUser", JSON.stringify(user));
+    }
+    
     router.replace("/dashboard/cobranza");
   };
 
