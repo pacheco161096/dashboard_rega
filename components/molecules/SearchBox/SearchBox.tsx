@@ -10,8 +10,7 @@ export interface SearchBoxProps {
 export const SearchBox:FC<SearchBoxProps> = (props) => {
   const {handleFilter} = props
 
-  const handleOnchange = (event) => {
-    console.log(event.target.value)
+  const handleOnchange = (event:React.ChangeEvent<HTMLInputElement>) => {
     handleFilter(event.target.value)
   }
 
