@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import s from "./cobranza.module.css";
 import Drawer from "@mui/material/Drawer";
 import { Factura, User } from "../customers/page";
@@ -42,40 +42,49 @@ function Cobranza() {
   const [montoCierre, setMontoCierre] = useState("");
   const [caja, setCaja] = useState<any>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const hasShownAlert = useRef(false);
   const { toast } = useToast();
 
   useEffect(() => {
     const employee = sessionStorage.getItem("loginUser");
-    const selectedUser = sessionStorage.getItem("selectedUser");
     const storedCaja = sessionStorage.getItem("caja");
 
     if (employee) {
       const parsedEmp = JSON.parse(employee);
       setEmployee(parsedEmp);
     }
-    
+
+    if (!storedCaja && !hasShownAlert.current) {
+      alert('La caja aún no está abierta');
+      hasShownAlert.current = true;
+    }
+  }, []);
+
+  useEffect(() => {
+    const storedCaja = sessionStorage.getItem("caja");
+    const selectedUser = sessionStorage.getItem("selectedUser");
+
     if (storedCaja) {
       const parsedCaja = JSON.parse(storedCaja);
       setCaja(parsedCaja);
       setIsOpenCaja(true);
+    } else {
+      setIsOpenCaja(false);
     }
 
     if (selectedUser && isOpenCaja) {
       const parsedUser = JSON.parse(selectedUser);
-
       if (Array.isArray(parsedUser) && parsedUser.length > 0) {
         setUser(parsedUser[0]);
         setOpenVenta(true);
         setTabNew(2);
         fetchDataUser(parsedUser[0]?.id);
       }
-    } else {
-      alert('La caja aun no está abierta')
     }
 
     const today = new Date().toISOString().split("T")[0];
     setCurrentDate(today);
-  }, []);
+  }, [isOpenCaja, isDialogOpen]);
 
   const fetchDataUser = async (userId: string) => {
     if (carShop.length > 0) {
