@@ -59,6 +59,14 @@
   @apply fixed inset-0 bg-black bg-opacity-50;
 }
 
+.Cobranza-openCaja {
+  @apply bg-black text-white px-2 py-1 rounded-md;
+}
+
+.Cobranza-closeCaja {
+  @apply bg-gray-500 text-white px-2 py-1 rounded-md;
+}
+
 .Cobranza-buttonVenta {
   @apply bg-green-600 text-white px-2 py-1 rounded-md;
 }

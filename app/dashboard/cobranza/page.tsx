@@ -216,21 +216,19 @@ function Cobranza() {
       ...caja,
       montoCierre: parseFloat(montoCierre),
       fechaHoraCierre: now.toISOString(),
+      employeeId: caja.employeeId.toString()
     };
 
-    console.log('cajaCerrada ', cajaCerrada);
-
     try {
-      /* await fetch("/api/caja/cerrar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(cajaCerrada),
-      }); */
-      sessionStorage.removeItem("caja");
-      setCaja(null);
-      setMontoCierre("");
-      setIsOpenCaja(false);
-      setIsDialogOpen(false);
+      const resp = await axios.post("https://cms.regatelecom.mx/api/cajas", { data: cajaCerrada });
+
+      if (resp?.status && resp?.status == 200) {
+        sessionStorage.removeItem("caja");
+        setCaja(null);
+        setMontoCierre("");
+        setIsOpenCaja(false);
+        setIsDialogOpen(false);
+      }
     } catch (err) {
       console.error("Error al cerrar caja:", err);
     }
@@ -254,7 +252,7 @@ function Cobranza() {
               </button>
             </div>
           </div>
-          <button className="bg-gray-500 text-white px-2 py-1 rounded-md" onClick={() => setIsDialogOpen(true)}>
+          <button className={ !isOpenCaja ? s["Cobranza-openCaja"] : s["Cobranza-closeCaja"]} onClick={() => setIsDialogOpen(true)}>
             🏦 {!isOpenCaja ? 'Abrir caja' : 'Cerrar caja'}
           </button>
         </div>
