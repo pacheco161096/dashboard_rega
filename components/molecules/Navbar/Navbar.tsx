@@ -3,6 +3,7 @@ import { NavItem } from '@/components/atoms/NavItem/NavItem'
 import s from './Navbar.module.css'
 import { HomeIcon,PeopleIcon,PackageIcon,CreditCardIcon   } from '@primer/octicons-react'
 import { usePathname } from "next/navigation";
+import { ChartBarIcon } from 'lucide-react';
 
 export const Navbar = () => {
   const nameLinks = [{
@@ -28,7 +29,13 @@ export const Navbar = () => {
     href:'/dashboard/cobranza',
     tooltip:'Cobranza', 
     icon:<CreditCardIcon  size={20}/>
-  }
+  },
+  {
+    name:'Reportes',
+    href:'/dashboard/reportes',
+    tooltip:'Reportes', 
+    icon:<ChartBarIcon  size={20}/>
+  },
   ]
   const pathname = usePathname();
 
