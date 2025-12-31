@@ -151,19 +151,45 @@ export default function Customers() {
   }, [data]);
 
   return (
-    <div className="">
+    <div className="w-full h-full">
       {isNewCliente ? <CreateCustomer open={showModalClient} onOpenChange={handleModalClient} /> : <CustomerForm open={showModalClient} onOpenChange={handleModalClient} mode="edit" userData={updateCliente ? updateCliente : null} userId={idCliente}/>}
       
+      {/* Header con acciones */}
       <div className={s.header}>
-        <Button onClick={handleNewCliente} variant="primary" size="md">Nuevo Cliente</Button>
-   
+        <Button onClick={handleNewCliente} variant="primary" size="md" className="flex items-center gap-2">
+          <i className="fa-solid fa-plus text-sm"></i>
+          <span>Nuevo Cliente</span>
+        </Button>
         <SearchBox handleFilter={handleFilter} />
       </div>
 
-      {loading && <span>Cargando...</span>}
-      {!loading && (
-        <Table data={filterData || data} handleUpdateCliente={handleUpdateCliente} handleRegisterPay={handleRegisterPay}/>
-      )}
+      {/* Espaciado y contenedor de la tabla */}
+      <div className="mt-8 w-full">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-16">
+            <div className="relative">
+              <div className="w-16 h-16 border-4 border-gray-200 border-t-indigo-600 rounded-full animate-spin"></div>
+            </div>
+            <p className="mt-4 text-gray-500 text-sm font-medium">Cargando clientes...</p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            {(!filterData || filterData.length === 0) && (!data || data.length === 0) ? (
+              <div className="flex flex-col items-center justify-center py-16 px-4">
+                <i className="fa-regular fa-users text-5xl text-gray-300 mb-4"></i>
+                <p className="text-gray-500 text-lg font-medium mb-2">No hay clientes registrados</p>
+                <p className="text-gray-400 text-sm text-center">Comienza agregando tu primer cliente</p>
+              </div>
+            ) : (
+              <Table 
+                data={filterData || data} 
+                handleUpdateCliente={handleUpdateCliente} 
+                handleRegisterPay={handleRegisterPay}
+              />
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

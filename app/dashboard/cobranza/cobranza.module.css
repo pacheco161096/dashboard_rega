@@ -1,38 +1,38 @@
 .Cobranza {
   @apply flex flex-col w-full text-black;
-  height: calc(100vh - 120px);
+  min-height: calc(100vh - 120px);
 }
 
 .Cobranza-header {
-  @apply flex border-b-2 mt-2 mb-4 pb-2;
+  @apply flex flex-col lg:flex-row border-b-2 mt-2 mb-4 pb-2 gap-3 lg:gap-0;
 }
 
 .Cobranza-cashInit {
-  @apply flex  justify-between w-2/3 pr-4;
+  @apply flex flex-col lg:flex-row justify-start items-start lg:items-center w-full lg:w-2/3 pr-0 lg:pr-4 gap-3;
 }
 
 .Cobranza-actions {
-  @apply flex justify-between w-1/3 border-l-2 px-4;
+  @apply flex flex-row justify-start lg:justify-between gap-2 w-full lg:w-1/3 border-l-0 lg:border-l-2 pl-0 lg:px-4 pt-3 lg:pt-0 border-t-2 lg:border-t-0 min-w-0;
 }
 
 .Cobranza-container {
-  @apply flex h-full;
+  @apply flex flex-col lg:flex-row h-full gap-4;
 }
 
 .Cobranza-products {
-  @apply flex w-2/3;
+  @apply flex flex-wrap w-full lg:w-2/3 gap-4;
 }
 
 .Cobranza-products__button {
-  @apply w-40 h-40 border-2 border-gray-300 flex flex-col items-center justify-center rounded-md cursor-pointer hover:bg-gray-100;
+  @apply w-full sm:w-40 h-40 border-2 border-gray-300 flex flex-col items-center justify-center rounded-md cursor-pointer hover:bg-gray-100;
 }
 
 .Cobranza-products__card {
-  @apply w-40 h-40 border p-2 flex flex-col justify-between rounded-md shadow-sm;
+  @apply w-full sm:w-40 h-40 border p-2 flex flex-col justify-between rounded-md shadow-sm;
 }
 
 .Cobranza-sidebar {
-  @apply flex flex-col align-middle justify-start h-full w-1/3 border-l-2 pl-2;
+  @apply flex flex-col align-middle justify-start h-auto lg:h-full w-full lg:w-1/3 border-l-0 lg:border-l-2 pl-0 lg:pl-2 pt-4 lg:pt-0 border-t-2 lg:border-t-0;
 }
 
 .Cobranza-titleSide {
@@ -60,23 +60,23 @@
 }
 
 .Cobranza-openCaja {
-  @apply bg-black text-white px-2 py-1 rounded-md;
+  @apply bg-black text-white px-3 py-2 rounded-md hover:bg-gray-800 transition-colors;
 }
 
 .Cobranza-closeCaja {
-  @apply bg-gray-500 text-white px-2 py-1 rounded-md;
+  @apply bg-gray-500 text-white px-3 py-2 rounded-md hover:bg-gray-600 transition-colors;
 }
 
 .Cobranza-buttonVenta {
-  @apply bg-green-600 text-white px-2 py-1 rounded-md;
+  @apply bg-green-600 text-white px-2 xl:px-3 py-2 rounded-md hover:bg-green-700 transition-colors text-sm xl:text-base;
 }
 
 .Cobranza-buttonGasto {
-  @apply bg-red-600 text-white px-2 py-1 rounded-md;
+  @apply bg-red-600 text-white px-2 xl:px-3 py-2 rounded-md hover:bg-red-700 transition-colors text-sm xl:text-base;
 }
 
 .Cobranza-buttonDisVentaGast {
-  @apply bg-gray-600 text-white px-2 py-1 rounded-md cursor-not-allowed;
+  @apply bg-gray-500 text-white px-2 xl:px-3 py-2 rounded-md cursor-not-allowed text-sm xl:text-base;
 }
 
 .Cobranza-buttonPay {

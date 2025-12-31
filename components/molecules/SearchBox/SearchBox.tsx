@@ -15,10 +15,16 @@ export const SearchBox:FC<SearchBoxProps> = (props) => {
   }
 
   return (
-    <>
-    <div className="relative w-full max-w-xl mr-6 focus-within:text-blue-600 flex justify-center items-center border border-gray-400 p-3">
-      <input onChange={handleOnchange} placeholder="Buscar Cliente" type="text" className="block w-full text-sm focus:outline-none  form-input leading-5 focus-within:text-blue-600  focus:shadow-outline-purple  text-gray-700" />
-    </div> 
-    </>
+    <div className="relative w-full max-w-xl">
+      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+        <i className="fa-solid fa-magnifying-glass text-sm"></i>
+      </div>
+      <input 
+        onChange={handleOnchange} 
+        placeholder="Buscar por ID, nombre o correo..." 
+        type="text" 
+        className="block w-full h-10 pl-10 pr-4 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-700 bg-white transition-all duration-200" 
+      />
+    </div>
   )
 }
