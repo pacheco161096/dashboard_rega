@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -18,10 +18,19 @@ interface TicketFormProps {
 }
 
 export default function TicketForm({ handleSubmit, isLoading = false }: TicketFormProps) {
+  // Función para obtener la fecha actual en formato YYYY-MM-DD
+  const getCurrentDate = () => {
+    const today = new Date()
+    const year = today.getFullYear()
+    const month = String(today.getMonth() + 1).padStart(2, '0')
+    const day = String(today.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
   const [formData, setFormData] = useState<TicketFormData>({
-    fecha: "",
+    fecha: getCurrentDate(),
     id_cliente: "",
-    estatus: "",
+    estatus: "En proceso",
     id_tecnico: "",
     descripcion: "",
   })
@@ -163,9 +172,9 @@ export default function TicketForm({ handleSubmit, isLoading = false }: TicketFo
               className="flex-1 bg-transparent"
               onClick={() =>
                 setFormData({
-                  fecha: "",
+                  fecha: getCurrentDate(),
                   id_cliente: "",
-                  estatus: "",
+                  estatus: "En proceso",
                   id_tecnico: "",
                   descripcion: "",
                 })

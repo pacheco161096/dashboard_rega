@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback, useMemo, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { PlusCircle, Search, TicketIcon, ArrowLeft, FileText, Clock, Loader2 } from "lucide-react"
@@ -15,39 +15,55 @@ type ViewType = "dashboard" | "create" | "track"
 export default function Reportes() {
   const [currentView, setCurrentView] = useState<ViewType>("dashboard")
   const { isLoading, error, success, submitTicket } = useTicketForm()
-  const { total, enProceso, finalizados, isLoading: statsLoading } = useTicketStats()
+  const { total, enProceso, finalizados, isLoading: statsLoading, refreshStats } = useTicketStats()
 
-  const handleSubmit = async (formData: TicketFormData, e: React.FormEvent) => {
+  // Memoizar handlers de cambio de vista
+  const handleViewChange = useCallback((view: ViewType) => {
+    setCurrentView(view)
+  }, [])
+
+  const handleBackToDashboard = useCallback(() => {
+    setCurrentView("dashboard")
+  }, [])
+
+  // Memoizar handleSubmit
+  const handleSubmit = useCallback(async (formData: TicketFormData, e: React.FormEvent) => {
     e.preventDefault()
     await submitTicket(formData)
-    
-    if (success) {
-      alert("Ticket creado exitosamente")
-    }
-  }
+  }, [submitTicket])
 
-  const renderView = () => {
+  // Redirigir al dashboard y actualizar estadísticas cuando el ticket se crea exitosamente
+  useEffect(() => {
+    if (success) {
+      refreshStats()
+      setCurrentView("dashboard")
+    }
+  }, [success, refreshStats])
+
+  // Actualizar estadísticas cuando se vuelve al dashboard
+  useEffect(() => {
+    if (currentView === "dashboard") {
+      refreshStats()
+    }
+  }, [currentView, refreshStats])
+
+  // Memoizar la vista renderizada
+  const renderedView = useMemo(() => {
     switch (currentView) {
       case "create":
         return (
           <div>
             <Button
               variant="outline"
-              onClick={() => setCurrentView("dashboard")}
+              onClick={handleBackToDashboard}
               className="mb-4 flex items-center gap-2"
             >
               <ArrowLeft className="h-4 w-4" />
-              Volver al Dashboard
+              Regresar
             </Button>
             {error && (
               <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
                 {error}
-              </div>
-            )}
-            
-            {success && (
-              <div className="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
-                Ticket creado exitosamente
               </div>
             )}
             
@@ -62,13 +78,13 @@ export default function Reportes() {
           <div>
             <Button
               variant="outline"
-              onClick={() => setCurrentView("dashboard")}
+              onClick={handleBackToDashboard}
               className="mb-4 flex items-center gap-2"
             >
               <ArrowLeft className="h-4 w-4" />
-              Volver al Dashboard
+              Regresar
             </Button>
-            <TicketTracker />
+            <TicketTracker onStatusUpdate={refreshStats} />
           </div>
         )
       default:
@@ -101,7 +117,7 @@ export default function Reportes() {
                   </CardHeader>
                   <CardContent className="pt-0">
                     <Button
-                      onClick={() => setCurrentView("create")}
+                      onClick={() => handleViewChange("create")}
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                       size="lg"
                     >
@@ -126,7 +142,7 @@ export default function Reportes() {
                   </CardHeader>
                   <CardContent className="pt-0">
                     <Button
-                      onClick={() => setCurrentView("track")}
+                      onClick={() => handleViewChange("track")}
                       className="w-full bg-green-600 hover:bg-green-700 text-white"
                       size="lg"
                     >
@@ -206,7 +222,7 @@ export default function Reportes() {
           </div>
         )
     }
-  }
+  }, [currentView, error, success, isLoading, handleSubmit, handleBackToDashboard, handleViewChange, total, enProceso, finalizados, statsLoading])
 
-  return <div>{renderView()}</div>
+  return <div>{renderedView}</div>
 }

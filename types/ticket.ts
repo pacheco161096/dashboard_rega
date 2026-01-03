@@ -15,8 +15,8 @@ export interface TicketData {
   fecha: string;
   id_cliente: number;
   estatus: string;
-  id_tecnico: number;
-  actualizacion: TicketActualizacion[];
+  id_tecnico: number | null;
+  actualizacion?: TicketActualizacion[]; // Opcional temporalmente
 }
 
 export interface TicketRequest {
@@ -31,6 +31,7 @@ export interface TicketAttributes {
   createdAt: string;
   updatedAt: string;
   publishedAt: string;
+  actualizacion?: TicketActualizacion[];
 }
 
 export interface TicketItem {

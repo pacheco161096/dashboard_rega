@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { ticketService } from "@/lib/ticketService";
 import { TicketListResponse } from "@/types/ticket";
 
@@ -8,52 +8,66 @@ interface TicketStats {
   finalizados: number;
   isLoading: boolean;
   error: string | null;
+  refreshStats: () => Promise<void>;
 }
 
 export const useTicketStats = (): TicketStats => {
-  const [stats, setStats] = useState<TicketStats>({
-    total: 0,
-    enProceso: 0,
-    finalizados: 0,
-    isLoading: true,
-    error: null,
-  });
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  const loadStats = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const response: TicketListResponse = await ticketService.getTickets();
+      setTickets(response.data || []);
+    } catch (error: any) {
+      console.error("Error al cargar estadísticas:", error);
+      setError(error.message);
+      setTickets([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const loadStats = async () => {
-      try {
-        setStats((prev) => ({ ...prev, isLoading: true, error: null }));
-
-        const response: TicketListResponse = await ticketService.getTickets();
-
-        const tickets = response.data;
-        const total = tickets.length;
-        const enProceso = tickets.filter(
-          (ticket) => ticket.attributes.estatus === "En proceso"
-        ).length;
-        const finalizados = tickets.filter(
-          (ticket) => ticket.attributes.estatus === "Finalizado"
-        ).length;
-
-        setStats({
-          total,
-          enProceso,
-          finalizados,
-          isLoading: false,
-          error: null,
-        });
-      } catch (error: any) {
-        console.error("Error al cargar estadísticas:", error);
-        setStats((prev) => ({
-          ...prev,
-          isLoading: false,
-          error: error.message,
-        }));
-      }
-    };
-
     loadStats();
+  }, [loadStats, refreshTrigger]);
+
+  const refreshStats = useCallback(async () => {
+    setRefreshTrigger(prev => prev + 1);
   }, []);
+
+  // Memoizar el cálculo de estadísticas
+  const stats = useMemo(() => {
+    const total = tickets.length;
+    
+    // Optimizar el filtrado usando reduce en una sola pasada
+    const { enProceso, finalizados } = tickets.reduce(
+      (acc, ticket) => {
+        const estatus = ticket.attributes?.estatus;
+        if (estatus === "En proceso") {
+          acc.enProceso++;
+        } else if (estatus === "Finalizado") {
+          acc.finalizados++;
+        }
+        return acc;
+      },
+      { enProceso: 0, finalizados: 0 }
+    );
+
+    return {
+      total,
+      enProceso,
+      finalizados,
+      isLoading,
+      error,
+      refreshStats,
+    };
+  }, [tickets, isLoading, error, refreshStats]);
 
   return stats;
 };

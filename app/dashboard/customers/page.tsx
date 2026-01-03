@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button, SearchBox, Table, CreateCustomer,CustomerForm} from "@/components/index";
 import axios from 'axios';
 import s from './customers.module.css'
@@ -75,27 +75,30 @@ export default function Customers() {
   const [isNewCliente, setIsNewCliente] = useState(false)
 
   const URL = ("https://monkfish-app-2et8k.ondigitalocean.app/api/users?populate=*")
-  const [data, setData] = useState<User[]>();
-  const [filterData, setFilterData] = useState<User[]>();
+  const [data, setData] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
+  const itemsPerPage = 10;
   const router = useRouter();
 
-  useEffect(() => {
-    fetchData();
-    setLoading(false);
-  }, [showModalClient]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true)
     try {
       const response = await axios.get(URL);
-      setData(response.data);
+      const users = response.data || [];
+      setData(users);
     } catch (err) {
       console.log('error' + err)
+      setData([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [showModalClient, fetchData]);
 
   /* Clientes */
 
@@ -129,26 +132,40 @@ export default function Customers() {
   };
 
   const handleFilter = useCallback((item: string) => {
-    if (!data || !item) return;
-  
-    const normalized = item.trim().toLowerCase();
-  
-    const filtered = data.filter((user) => {
-      const matchId = user.id.toString() === normalized;
-      const matchName = user.nombre?.toLowerCase() === normalized;
-      const matchEmail = user.email?.toLowerCase() === normalized;
-      return matchId || matchName || matchEmail;
-    });
-  
-    // Solo actualiza si hay diferencia con el estado actual
-    const isSame = filtered.length === data.length && filtered.every((u, i) => u.id === data[i].id);
-  
-    if (filtered.length && !isSame) {
-      setFilterData(filtered);
-    } else {
-      setFilterData(data);
+    setSearchQuery(item);
+    setCurrentPage(1); // Resetear a la primera página al buscar
+  }, []);
+
+  // Filtrar datos basado en la búsqueda (busca en todos los clientes)
+  const filteredCustomers = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return data;
     }
-  }, [data]);
+
+    const normalized = searchQuery.trim().toLowerCase();
+    
+    return data.filter((user) => {
+      const matchId = user.id.toString().includes(normalized);
+      const matchName = user.nombre?.toLowerCase().includes(normalized);
+      const matchEmail = user.email?.toLowerCase().includes(normalized);
+      const matchApellido = user.apellido?.toLowerCase().includes(normalized);
+      const matchCelular = user.celular?.includes(normalized);
+      
+      return matchId || matchName || matchEmail || matchApellido || matchCelular;
+    });
+  }, [data, searchQuery]);
+
+  // Calcular datos paginados
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredCustomers.slice(startIndex, endIndex);
+  }, [filteredCustomers, currentPage, itemsPerPage]);
+
+  // Calcular total de páginas
+  const totalPages = useMemo(() => {
+    return Math.ceil(filteredCustomers.length / itemsPerPage);
+  }, [filteredCustomers.length, itemsPerPage]);
 
   return (
     <div className="w-full h-full">
@@ -174,18 +191,76 @@ export default function Customers() {
           </div>
         ) : (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-            {(!filterData || filterData.length === 0) && (!data || data.length === 0) ? (
+            {(!data || data.length === 0) ? (
               <div className="flex flex-col items-center justify-center py-16 px-4">
                 <i className="fa-regular fa-users text-5xl text-gray-300 mb-4"></i>
                 <p className="text-gray-500 text-lg font-medium mb-2">No hay clientes registrados</p>
                 <p className="text-gray-400 text-sm text-center">Comienza agregando tu primer cliente</p>
               </div>
             ) : (
-              <Table 
-                data={filterData || data} 
-                handleUpdateCliente={handleUpdateCliente} 
-                handleRegisterPay={handleRegisterPay}
-              />
+              <>
+                <Table 
+                  data={paginatedData} 
+                  handleUpdateCliente={handleUpdateCliente} 
+                  handleRegisterPay={handleRegisterPay}
+                />
+                {/* Controles de paginación */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t border-gray-200">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-700">
+                        Mostrando {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredCustomers.length)} de {filteredCustomers.length} clientes
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                        className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Anterior
+                      </button>
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                          .filter(page => {
+                            // Mostrar primera, última, actual y adyacentes
+                            return page === 1 || 
+                                   page === totalPages || 
+                                   (page >= currentPage - 1 && page <= currentPage + 1);
+                          })
+                          .map((page, index, array) => {
+                            // Agregar puntos suspensivos si hay gap
+                            const showEllipsis = index > 0 && array[index - 1] !== page - 1;
+                            return (
+                              <div key={page} className="flex items-center gap-1">
+                                {showEllipsis && (
+                                  <span className="px-2 text-gray-500">...</span>
+                                )}
+                                <button
+                                  onClick={() => setCurrentPage(page)}
+                                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                                    currentPage === page
+                                      ? 'bg-indigo-600 text-white'
+                                      : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                                  }`}
+                                >
+                                  {page}
+                                </button>
+                              </div>
+                            );
+                          })}
+                      </div>
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={currentPage === totalPages}
+                        className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Siguiente
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}

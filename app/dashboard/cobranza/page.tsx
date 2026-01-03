@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import s from "./cobranza.module.css";
 import Drawer from "@mui/material/Drawer";
 import { Factura, User } from "../customers/page";
@@ -47,48 +47,65 @@ function Cobranza() {
   const hasShownAlert = useRef(false);
   const { toast } = useToast();
 
+  // Memoizar la fecha actual
+  const currentDateMemo = useMemo(() => {
+    return new Date().toISOString().split("T")[0];
+  }, []);
+
   useEffect(() => {
     const employee = sessionStorage.getItem("loginUser");
     const storedCaja = sessionStorage.getItem("caja");
 
     if (employee) {
-      const parsedEmp = JSON.parse(employee);
-      setEmployee(parsedEmp);
+      try {
+        const parsedEmp = JSON.parse(employee);
+        setEmployee(parsedEmp);
+      } catch (err) {
+        console.error("Error parsing employee:", err);
+      }
     }
 
     if (!storedCaja && !hasShownAlert.current) {
       alert('La caja aún no está abierta');
       hasShownAlert.current = true;
     }
-  }, []);
+
+    setCurrentDate(currentDateMemo);
+  }, [currentDateMemo]);
 
   useEffect(() => {
     const storedCaja = sessionStorage.getItem("caja");
     const selectedUser = sessionStorage.getItem("selectedUser");
 
     if (storedCaja) {
-      const parsedCaja = JSON.parse(storedCaja);
-      setCaja(parsedCaja);
-      setIsOpenCaja(true);
+      try {
+        const parsedCaja = JSON.parse(storedCaja);
+        setCaja(parsedCaja);
+        setIsOpenCaja(true);
+      } catch (err) {
+        console.error("Error parsing caja:", err);
+        setIsOpenCaja(false);
+      }
     } else {
       setIsOpenCaja(false);
     }
 
     if (selectedUser && isOpenCaja) {
-      const parsedUser = JSON.parse(selectedUser);
-      if (Array.isArray(parsedUser) && parsedUser.length > 0) {
-        setUser(parsedUser[0]);
-        setOpenVenta(true);
-        setTabNew(2);
-        fetchDataUser(parsedUser[0]?.id);
+      try {
+        const parsedUser = JSON.parse(selectedUser);
+        if (Array.isArray(parsedUser) && parsedUser.length > 0) {
+          setUser(parsedUser[0]);
+          setOpenVenta(true);
+          setTabNew(2);
+          fetchDataUser(parsedUser[0]?.id);
+        }
+      } catch (err) {
+        console.error("Error parsing selectedUser:", err);
       }
     }
-
-    const today = new Date().toISOString().split("T")[0];
-    setCurrentDate(today);
   }, [isOpenCaja, isDialogOpen]);
 
-  const fetchDataUser = async (userId: string) => {
+  const fetchDataUser = useCallback(async (userId: string) => {
     if (carShop.length > 0) {
       setCarShop([]);
     }
@@ -101,11 +118,10 @@ function Cobranza() {
       setUser(response.data);
     } catch (err) {
       console.log('error' + err)
-    } finally {
     }
-  };
+  }, [carShop.length]);
 
-  const addCarShop = (item: ItemCarInt) => {
+  const addCarShop = useCallback((item: ItemCarInt) => {
     setCarShop((prevCarShop) => {
       // Verificar si el producto ya está en el carrito
       const existingItem = prevCarShop.find((product) => product.id === item.id);
@@ -124,18 +140,18 @@ function Cobranza() {
       ...prevFacturas, 
       Number(item.idfactura) // Asegura que sea un número
     ]);
-  };
+  }, []);
   
 
-  const incrementQuantity = (id: number) => {
+  const incrementQuantity = useCallback((id: number) => {
     setCarShop((prevCarShop) =>
       prevCarShop.map((item) =>
         item.id === id ? { ...item, cantidad: item.cantidad + 1 } : item
       )
     );
-  };
+  }, []);
 
-  const decrementQuantity = (id: number) => {
+  const decrementQuantity = useCallback((id: number) => {
     setCarShop((prevCarShop) =>
       prevCarShop
         .map((item) =>
@@ -143,14 +159,14 @@ function Cobranza() {
         )
         .filter((item) => item.cantidad > 0) // Elimina si la cantidad llega a 0
     );
-  };
+  }, []);
 
-  function openDrawerVenta() {
+  const openDrawerVenta = useCallback(() => {
     setOpenVenta(true);
     setTabNew(1);
-  }
+  }, []);
 
-  function closeDrawerVenta() {
+  const closeDrawerVenta = useCallback(() => {
     if (carShop.length > 0) {
       setCarShop([]);
     }
@@ -161,18 +177,25 @@ function Cobranza() {
     setSearchUserId(""); // Limpiar búsqueda
     sessionStorage.removeItem("selectedUser"); // Limpia user del storage
     setOpenVenta(false);
-  }
+  }, [carShop.length]);
 
 
   const SubmitVenta = (e: { preventDefault: () => void; }) => {
     e.preventDefault();
   }
 
-  const totalPrecio = carShop.reduce((total, item) => {
-    return total + (item.precio * item.cantidad);
-  }, 0);
+  const totalPrecio = useMemo(() => {
+    return carShop.reduce((total, item) => {
+      return total + (item.precio * item.cantidad);
+    }, 0);
+  }, [carShop]);
 
-  const sendPay = async () => {
+  // Memoizar los IDs del carrito para búsquedas rápidas
+  const carShopIds = useMemo(() => {
+    return new Set(carShop.map(item => item.id));
+  }, [carShop]);
+
+  const sendPay = useCallback(async () => {
     // Validar que si el método de pago no es Efectivo, debe tener referencia
     if (paymentMethod !== "Efectivo" && !paymentReference.trim()) {
       toast({
@@ -229,7 +252,7 @@ function Cobranza() {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [paymentMethod, paymentReference, carShop, user?.id, toast]);
 
   const abrirCaja = () => {
     const now = new Date();
@@ -512,7 +535,7 @@ function Cobranza() {
                             <h4 className="text-sm font-medium text-gray-300 mb-2">Facturas Pendientes</h4>
                             {
                               user?.Facturas?.map((factura: Factura, i) => {
-                                const isInCart = carShop.some((item) => item.id === factura.id);
+                                const isInCart = carShopIds.has(factura.id);
                                 const statusItemCarClass = cn(
                                   {
                                     'bg-rose-500': user.recargo,
