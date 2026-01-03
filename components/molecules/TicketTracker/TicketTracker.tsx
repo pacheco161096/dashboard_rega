@@ -6,12 +6,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Search, Eye, Calendar, User, FileText, Clock, Loader2 } from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Search, Eye, Calendar, User, FileText, Clock, Loader2, Save } from "lucide-react"
 import { ticketService } from "@/lib/ticketService"
-import { TicketListResponse } from "@/types/ticket"
+import { TicketListResponse, TicketRequest } from "@/types/ticket"
 
 interface Ticket {
   id: string;
+  idReal: number; // ID real del ticket para la API
   fecha: string;
   id_cliente: string;
   estatus: string;
@@ -19,14 +22,25 @@ interface Ticket {
   descripcion: string;
   fechaCreacion: string;
   ultimaActualizacion: string;
+  reporteTecnico?: string; // Último reporte del técnico de las actualizaciones
 }
 
-export default function TicketTracker() {
+interface TicketTrackerProps {
+  onStatusUpdate?: () => void;
+}
+
+export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [newStatus, setNewStatus] = useState<string>("")
+  const [updateDescription, setUpdateDescription] = useState<string>("")
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [updateError, setUpdateError] = useState<string | null>(null)
+  const [updateSuccess, setUpdateSuccess] = useState(false)
+  const [ticketDetails, setTicketDetails] = useState<any>(null) // Detalles completos del ticket
 
   // Cargar tickets desde la API
   useEffect(() => {
@@ -40,10 +54,11 @@ export default function TicketTracker() {
         // Transformar los datos de la API al formato del componente
         const transformedTickets: Ticket[] = response.data.map((ticket) => ({
           id: `TK-${ticket.id.toString().padStart(3, '0')}`,
+          idReal: ticket.id, // Guardar el ID real para actualizaciones
           fecha: ticket.attributes.fecha,
           id_cliente: ticket.attributes.id_cliente,
           estatus: ticket.attributes.estatus,
-          id_tecnico: ticket.attributes.id_tecnico,
+          id_tecnico: ticket.attributes.id_tecnico || "",
           descripcion: "Descripción del ticket", // La API no devuelve descripción en el listado
           fechaCreacion: new Date(ticket.attributes.createdAt).toLocaleString('es-ES'),
           ultimaActualizacion: new Date(ticket.attributes.updatedAt).toLocaleString('es-ES'),
@@ -60,6 +75,98 @@ export default function TicketTracker() {
 
     loadTickets()
   }, [])
+
+  // Resetear estados cuando se selecciona un ticket
+  useEffect(() => {
+    if (selectedTicket) {
+      setNewStatus(selectedTicket.estatus)
+      setUpdateDescription("")
+      setUpdateError(null)
+      setUpdateSuccess(false)
+    }
+  }, [selectedTicket])
+
+  // Función para actualizar el estatus del ticket
+  const handleUpdateStatus = async () => {
+    if (!selectedTicket) return
+
+    if (!updateDescription.trim()) {
+      setUpdateError("Por favor, ingresa el reporte del técnico")
+      return
+    }
+
+    setIsUpdating(true)
+    setUpdateError(null)
+    setUpdateSuccess(false)
+
+    try {
+      // const fechaActual = new Date().toISOString().split('T')[0]
+      
+      // // Obtener actualizaciones existentes si hay
+      // let actualizacionesExistentes: any[] = []
+      // if (ticketDetails?.data?.attributes?.actualizacion && Array.isArray(ticketDetails.data.attributes.actualizacion)) {
+      //   actualizacionesExistentes = ticketDetails.data.attributes.actualizacion
+      // }
+      
+      // // Agregar la nueva actualización
+      // const nuevaActualizacion = {
+      //   fecha: fechaActual,
+      //   descripcion: updateDescription
+      // }
+      
+      const ticketData: TicketRequest = {
+        data: {
+          fecha: selectedTicket.fecha,
+          id_cliente: parseInt(selectedTicket.id_cliente),
+          estatus: newStatus,
+          id_tecnico: selectedTicket.id_tecnico ? parseInt(selectedTicket.id_tecnico) : null,
+          // actualizacion: [...actualizacionesExistentes, nuevaActualizacion]
+          // actualizacion: [] // Temporalmente comentado hasta que el servicio lo soporte
+        }
+      }
+
+      console.log("Enviando actualización:", JSON.stringify(ticketData, null, 2))
+      const updateResponse = await ticketService.updateTicket(selectedTicket.idReal, ticketData)
+      console.log("Respuesta de actualización:", updateResponse)
+      
+      setUpdateSuccess(true)
+      
+      // Recargar los tickets para reflejar los cambios
+      const ticketsResponse: TicketListResponse = await ticketService.getTickets()
+      const transformedTickets: Ticket[] = ticketsResponse.data.map((ticket) => ({
+        id: `TK-${ticket.id.toString().padStart(3, '0')}`,
+        idReal: ticket.id,
+        fecha: ticket.attributes.fecha,
+        id_cliente: ticket.attributes.id_cliente,
+        estatus: ticket.attributes.estatus,
+        id_tecnico: ticket.attributes.id_tecnico || "",
+        descripcion: "Descripción del ticket",
+        fechaCreacion: new Date(ticket.attributes.createdAt).toLocaleString('es-ES'),
+        ultimaActualizacion: new Date(ticket.attributes.updatedAt).toLocaleString('es-ES'),
+      }))
+      
+      setTickets(transformedTickets)
+      
+      // Actualizar estadísticas en el dashboard si hay callback
+      if (onStatusUpdate) {
+        onStatusUpdate()
+      }
+
+      // Cerrar el modal después de guardar exitosamente
+      setTimeout(() => {
+        setSelectedTicket(null)
+        setUpdateDescription("")
+        setUpdateSuccess(false)
+        setTicketDetails(null)
+      }, 1000)
+      
+    } catch (error: any) {
+      console.error("Error al actualizar el ticket:", error)
+      setUpdateError(error.message || "Error al actualizar el ticket")
+    } finally {
+      setIsUpdating(false)
+    }
+  }
 
   const filteredTickets = tickets.filter(
     (ticket) =>
@@ -206,7 +313,15 @@ console.log('filteredTickets', filteredTickets)
                             <h4 className="text-lg font-semibold text-gray-900">{ticket.id}</h4>
                             <Badge className={getStatusColor(ticket.estatus)}>{ticket.estatus}</Badge>
                           </div>
-                          <Button variant="outline" size="sm" onClick={() => setSelectedTicket(ticket)}>
+                          <Button variant="outline" size="sm" onClick={() => {
+                            // Usar directamente los datos del ticket que ya tenemos en la lista
+                            // No hacer llamado adicional a getTicketById() para evitar error 403
+                            setSelectedTicket({
+                              ...ticket,
+                              reporteTecnico: ticket.reporteTecnico || "" // Usar el reporte si ya existe, sino vacío
+                            })
+                            setTicketDetails(null) // No necesitamos detalles adicionales por ahora
+                          }}>
                             <Eye className="h-4 w-4 mr-1" />
                             Ver Detalles
                           </Button>
@@ -244,7 +359,12 @@ console.log('filteredTickets', filteredTickets)
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-xl">Detalles del Ticket {selectedTicket.id}</CardTitle>
-                  <Button variant="outline" size="sm" onClick={() => setSelectedTicket(null)}>
+                  <Button variant="outline" size="sm" onClick={() => {
+                    setSelectedTicket(null)
+                    setUpdateDescription("")
+                    setUpdateError(null)
+                    setUpdateSuccess(false)
+                  }}>
                     Cerrar
                   </Button>
                 </div>
@@ -282,6 +402,80 @@ console.log('filteredTickets', filteredTickets)
                   <Label className="font-semibold">Descripción del Problema</Label>
                   <p className="text-gray-700 mt-1 p-3 bg-gray-50 rounded-md">{selectedTicket.descripcion}</p>
                 </div>
+
+                {/* Reporte del técnico - Mostrar siempre */}
+                <div>
+                  <Label className="font-semibold">Reporte del técnico</Label>
+                  <p className="text-gray-700 mt-1 p-3 bg-gray-50 rounded-md min-h-[80px]">
+                    {selectedTicket.reporteTecnico || "No hay reporte disponible"}
+                  </p>
+                </div>
+
+                {/* Sección para cambiar estatus - Solo si no está finalizado */}
+                {selectedTicket.estatus !== "Finalizado" && (
+                  <div className="border-t pt-4 mt-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Cambiar Estatus del Ticket</h3>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="status-select" className="font-semibold">Nuevo Estatus</Label>
+                        <Select value={newStatus} onValueChange={setNewStatus}>
+                          <SelectTrigger id="status-select" className="mt-1">
+                            <SelectValue placeholder="Selecciona un estatus" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="En proceso">En proceso</SelectItem>
+                            <SelectItem value="Finalizado">Finalizado</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="update-description" className="font-semibold">
+                          Reporte del técnico
+                        </Label>
+                        <Textarea
+                          id="update-description"
+                          placeholder="Ingresa el reporte del técnico..."
+                          value={updateDescription}
+                          onChange={(e) => setUpdateDescription(e.target.value)}
+                          className="mt-1"
+                          rows={4}
+                        />
+                      </div>
+
+                      {updateError && (
+                        <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded-md text-sm">
+                          {updateError}
+                        </div>
+                      )}
+
+                      {updateSuccess && (
+                        <div className="p-3 bg-green-100 border border-green-400 text-green-700 rounded-md text-sm">
+                          Ticket actualizado exitosamente
+                        </div>
+                      )}
+
+                      <Button
+                        onClick={handleUpdateStatus}
+                        disabled={isUpdating || newStatus === selectedTicket.estatus}
+                        className="w-full"
+                      >
+                        {isUpdating ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Actualizando...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="h-4 w-4 mr-2" />
+                            Guardar Cambios
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

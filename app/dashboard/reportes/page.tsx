@@ -15,7 +15,7 @@ type ViewType = "dashboard" | "create" | "track"
 export default function Reportes() {
   const [currentView, setCurrentView] = useState<ViewType>("dashboard")
   const { isLoading, error, success, submitTicket } = useTicketForm()
-  const { total, enProceso, finalizados, isLoading: statsLoading } = useTicketStats()
+  const { total, enProceso, finalizados, isLoading: statsLoading, refreshStats } = useTicketStats()
 
   // Memoizar handlers de cambio de vista
   const handleViewChange = useCallback((view: ViewType) => {
@@ -32,12 +32,20 @@ export default function Reportes() {
     await submitTicket(formData)
   }, [submitTicket])
 
-  // Mostrar alerta cuando el ticket se crea exitosamente
+  // Redirigir al dashboard y actualizar estadísticas cuando el ticket se crea exitosamente
   useEffect(() => {
     if (success) {
-      alert("Ticket creado exitosamente")
+      refreshStats()
+      setCurrentView("dashboard")
     }
-  }, [success])
+  }, [success, refreshStats])
+
+  // Actualizar estadísticas cuando se vuelve al dashboard
+  useEffect(() => {
+    if (currentView === "dashboard") {
+      refreshStats()
+    }
+  }, [currentView, refreshStats])
 
   // Memoizar la vista renderizada
   const renderedView = useMemo(() => {
@@ -51,17 +59,11 @@ export default function Reportes() {
               className="mb-4 flex items-center gap-2"
             >
               <ArrowLeft className="h-4 w-4" />
-              Volver al Dashboard
+              Regresar
             </Button>
             {error && (
               <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
                 {error}
-              </div>
-            )}
-            
-            {success && (
-              <div className="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
-                Ticket creado exitosamente
               </div>
             )}
             
@@ -80,9 +82,9 @@ export default function Reportes() {
               className="mb-4 flex items-center gap-2"
             >
               <ArrowLeft className="h-4 w-4" />
-              Volver al Dashboard
+              Regresar
             </Button>
-            <TicketTracker />
+            <TicketTracker onStatusUpdate={refreshStats} />
           </div>
         )
       default:

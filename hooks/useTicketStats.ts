@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { ticketService } from "@/lib/ticketService";
 import { TicketListResponse } from "@/types/ticket";
 
@@ -8,31 +8,37 @@ interface TicketStats {
   finalizados: number;
   isLoading: boolean;
   error: string | null;
+  refreshStats: () => Promise<void>;
 }
 
 export const useTicketStats = (): TicketStats => {
   const [tickets, setTickets] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  const loadStats = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const response: TicketListResponse = await ticketService.getTickets();
+      setTickets(response.data || []);
+    } catch (error: any) {
+      console.error("Error al cargar estadísticas:", error);
+      setError(error.message);
+      setTickets([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const loadStats = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        const response: TicketListResponse = await ticketService.getTickets();
-        setTickets(response.data || []);
-      } catch (error: any) {
-        console.error("Error al cargar estadísticas:", error);
-        setError(error.message);
-        setTickets([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     loadStats();
+  }, [loadStats, refreshTrigger]);
+
+  const refreshStats = useCallback(async () => {
+    setRefreshTrigger(prev => prev + 1);
   }, []);
 
   // Memoizar el cálculo de estadísticas
@@ -59,8 +65,9 @@ export const useTicketStats = (): TicketStats => {
       finalizados,
       isLoading,
       error,
+      refreshStats,
     };
-  }, [tickets, isLoading, error]);
+  }, [tickets, isLoading, error, refreshStats]);
 
   return stats;
 };

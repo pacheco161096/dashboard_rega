@@ -75,6 +75,21 @@ export class TicketService {
   }
 
   /**
+   * Actualiza un ticket existente
+   * @param id - ID del ticket a actualizar
+   * @param ticketData - Datos del ticket a actualizar
+   * @returns Promise con la respuesta de la API
+   */
+  async updateTicket(id: number, ticketData: TicketRequest): Promise<TicketResponse> {
+    try {
+      const response = await this.axiosInstance.put<TicketResponse>(`/tickets/${id}`, ticketData);
+      return response.data;
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
    * Maneja los errores de la API de manera consistente
    * @param error - Error de Axios
    * @returns Error personalizado
