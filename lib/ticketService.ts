@@ -53,7 +53,7 @@ export class TicketService {
    */
   async getTickets(): Promise<TicketListResponse> {
     try {
-      const response = await this.axiosInstance.get<TicketListResponse>('/tickets');
+      const response = await this.axiosInstance.get<TicketListResponse>('/tickets?populate=*');
       return response.data;
     } catch (error: any) {
       throw this.handleError(error);
