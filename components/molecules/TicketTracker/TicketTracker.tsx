@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, Eye, Calendar, User, FileText, Clock, Loader2, Save } from "lucide-react"
 import { ticketService } from "@/lib/ticketService"
-import { TicketListResponse, TicketRequest } from "@/types/ticket"
+import { TicketListResponse, TicketRequest, TicketActualizacion } from "@/types/ticket"
 
 interface Ticket {
   id: string;
@@ -22,7 +22,7 @@ interface Ticket {
   descripcion: string;
   fechaCreacion: string;
   ultimaActualizacion: string;
-  reporteTecnico?: string; // Último reporte del técnico de las actualizaciones
+  actualizaciones: TicketActualizacion[]; // Array de actualizaciones/comentarios
 }
 
 interface TicketTrackerProps {
@@ -51,18 +51,35 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
         
         const response: TicketListResponse = await ticketService.getTickets()
         console.log('response', response.data)
+        
+        // Ordenar por fecha de creación (más nuevos primero) antes de transformar
+        const sortedData = [...response.data].sort((a, b) => {
+          const dateA = new Date(a.attributes.createdAt).getTime()
+          const dateB = new Date(b.attributes.createdAt).getTime()
+          return dateB - dateA // Orden descendente (más nuevos primero)
+        })
+        
         // Transformar los datos de la API al formato del componente
-        const transformedTickets: Ticket[] = response.data.map((ticket) => ({
-          id: `TK-${ticket.id.toString().padStart(3, '0')}`,
-          idReal: ticket.id, // Guardar el ID real para actualizaciones
-          fecha: ticket.attributes.fecha,
-          id_cliente: ticket.attributes.id_cliente,
-          estatus: ticket.attributes.estatus,
-          id_tecnico: ticket.attributes.id_tecnico || "",
-          descripcion: "Descripción del ticket", // La API no devuelve descripción en el listado
-          fechaCreacion: new Date(ticket.attributes.createdAt).toLocaleString('es-ES'),
-          ultimaActualizacion: new Date(ticket.attributes.updatedAt).toLocaleString('es-ES'),
-        }))
+        const transformedTickets: Ticket[] = sortedData.map((ticket) => {
+          const actualizaciones = ticket.attributes.actualizacion || []
+          // Obtener la primera descripción de las actualizaciones (descripción inicial del problema)
+          const primeraDescripcion = actualizaciones.length > 0 
+            ? actualizaciones[0].descripcion 
+            : "Sin descripción disponible"
+          
+          return {
+            id: `TK-${ticket.id.toString().padStart(3, '0')}`,
+            idReal: ticket.id, // Guardar el ID real para actualizaciones
+            fecha: ticket.attributes.fecha,
+            id_cliente: ticket.attributes.id_cliente,
+            estatus: ticket.attributes.estatus,
+            id_tecnico: ticket.attributes.id_tecnico || "",
+            descripcion: primeraDescripcion,
+            fechaCreacion: new Date(ticket.attributes.createdAt).toLocaleString('es-ES'),
+            ultimaActualizacion: new Date(ticket.attributes.updatedAt).toLocaleString('es-ES'),
+            actualizaciones: actualizaciones,
+          }
+        })
         
         setTickets(transformedTickets)
       } catch (error: any) {
@@ -133,17 +150,34 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
       
       // Recargar los tickets para reflejar los cambios
       const ticketsResponse: TicketListResponse = await ticketService.getTickets()
-      const transformedTickets: Ticket[] = ticketsResponse.data.map((ticket) => ({
-        id: `TK-${ticket.id.toString().padStart(3, '0')}`,
-        idReal: ticket.id,
-        fecha: ticket.attributes.fecha,
-        id_cliente: ticket.attributes.id_cliente,
-        estatus: ticket.attributes.estatus,
-        id_tecnico: ticket.attributes.id_tecnico || "",
-        descripcion: "Descripción del ticket",
-        fechaCreacion: new Date(ticket.attributes.createdAt).toLocaleString('es-ES'),
-        ultimaActualizacion: new Date(ticket.attributes.updatedAt).toLocaleString('es-ES'),
-      }))
+      
+      // Ordenar por fecha de creación (más nuevos primero) antes de transformar
+      const sortedData = [...ticketsResponse.data].sort((a, b) => {
+        const dateA = new Date(a.attributes.createdAt).getTime()
+        const dateB = new Date(b.attributes.createdAt).getTime()
+        return dateB - dateA // Orden descendente (más nuevos primero)
+      })
+      
+      const transformedTickets: Ticket[] = sortedData.map((ticket) => {
+        const actualizaciones = ticket.attributes.actualizacion || []
+        // Obtener la primera descripción de las actualizaciones (descripción inicial del problema)
+        const primeraDescripcion = actualizaciones.length > 0 
+          ? actualizaciones[0].descripcion 
+          : "Sin descripción disponible"
+        
+        return {
+          id: `TK-${ticket.id.toString().padStart(3, '0')}`,
+          idReal: ticket.id,
+          fecha: ticket.attributes.fecha,
+          id_cliente: ticket.attributes.id_cliente,
+          estatus: ticket.attributes.estatus,
+          id_tecnico: ticket.attributes.id_tecnico || "",
+          descripcion: primeraDescripcion,
+          fechaCreacion: new Date(ticket.attributes.createdAt).toLocaleString('es-ES'),
+          ultimaActualizacion: new Date(ticket.attributes.updatedAt).toLocaleString('es-ES'),
+          actualizaciones: actualizaciones,
+        }
+      })
       
       setTickets(transformedTickets)
       
@@ -315,12 +349,8 @@ console.log('filteredTickets', filteredTickets)
                           </div>
                           <Button variant="outline" size="sm" onClick={() => {
                             // Usar directamente los datos del ticket que ya tenemos en la lista
-                            // No hacer llamado adicional a getTicketById() para evitar error 403
-                            setSelectedTicket({
-                              ...ticket,
-                              reporteTecnico: ticket.reporteTecnico || "" // Usar el reporte si ya existe, sino vacío
-                            })
-                            setTicketDetails(null) // No necesitamos detalles adicionales por ahora
+                            setSelectedTicket(ticket)
+                            setTicketDetails(null)
                           }}>
                             <Eye className="h-4 w-4 mr-1" />
                             Ver Detalles
@@ -398,17 +428,41 @@ console.log('filteredTickets', filteredTickets)
                     <p className="text-gray-700">{selectedTicket.ultimaActualizacion}</p>
                   </div>
                 </div>
+                {/* Descripción del Problema */}
                 <div>
                   <Label className="font-semibold">Descripción del Problema</Label>
-                  <p className="text-gray-700 mt-1 p-3 bg-gray-50 rounded-md">{selectedTicket.descripcion}</p>
+                  <p className="text-gray-700 mt-1 p-3 bg-gray-50 rounded-md">
+                    {selectedTicket.descripcion || "No hay descripción disponible"}
+                  </p>
                 </div>
 
-                {/* Reporte del técnico - Mostrar siempre */}
+                {/* Reporte del técnico - Mostrar actualizaciones excepto la primera (que ya está en Descripción del Problema) */}
                 <div>
                   <Label className="font-semibold">Reporte del técnico</Label>
-                  <p className="text-gray-700 mt-1 p-3 bg-gray-50 rounded-md min-h-[80px]">
-                    {selectedTicket.reporteTecnico || "No hay reporte disponible"}
-                  </p>
+                  {selectedTicket.actualizaciones && selectedTicket.actualizaciones.length > 1 ? (
+                    <div className="mt-1 p-3 bg-gray-50 rounded-md min-h-[80px]">
+                      <div className="space-y-2">
+                        {selectedTicket.actualizaciones.slice(1).map((actualizacion, index) => (
+                          <div key={actualizacion.id || index + 1} className="pb-2 border-b border-gray-200 last:border-0 last:pb-0">
+                            <div className="text-xs text-gray-500 mb-1">
+                              {actualizacion.fecha 
+                                ? new Date(actualizacion.fecha + 'T00:00:00').toLocaleDateString('es-ES', {
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric'
+                                  })
+                                : actualizacion.fecha}
+                            </div>
+                            <p className="text-gray-700 text-sm">{actualizacion.descripcion}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 mt-1 p-3 bg-gray-50 rounded-md min-h-[80px]">
+                      No hay reporte disponible
+                    </p>
+                  )}
                 </div>
 
                 {/* Sección para cambiar estatus - Solo si no está finalizado */}

@@ -7,6 +7,7 @@ export interface TicketFormData {
 }
 
 export interface TicketActualizacion {
+  id?: number;
   fecha: string;
   descripcion: string;
 }
