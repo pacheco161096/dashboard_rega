@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { TicketFormData, TicketRequest } from '@/types/ticket';
 import { ticketService } from '@/lib/ticketService';
 
@@ -15,7 +15,7 @@ export const useTicketForm = (): UseTicketFormReturn => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const submitTicket = async (formData: TicketFormData): Promise<void> => {
+  const submitTicket = useCallback(async (formData: TicketFormData): Promise<void> => {
     setIsLoading(true);
     setError(null);
     setSuccess(false);
@@ -49,13 +49,13 @@ export const useTicketForm = (): UseTicketFormReturn => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const resetState = () => {
+  const resetState = useCallback(() => {
     setError(null);
     setSuccess(false);
     setIsLoading(false);
-  };
+  }, []);
 
   return {
     isLoading,

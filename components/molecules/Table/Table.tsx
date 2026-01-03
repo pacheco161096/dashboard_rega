@@ -24,8 +24,8 @@ interface TableProps {
 export const Table: FC<TableProps> = ({ data, handleUpdateCliente, handleRegisterPay }) => {
   return (
     <>
-      {/* Desktop Table */}
-      <div className="hidden md:block overflow-x-auto">
+      {/* Desktop Table - Solo visible desde 1024px (lg) */}
+      <div className="hidden lg:block overflow-x-auto">
         <ShadTable>
           <TableHeader>
             <TableRow className="bg-gray-50 hover:bg-gray-50">
@@ -88,8 +88,8 @@ export const Table: FC<TableProps> = ({ data, handleUpdateCliente, handleRegiste
         </ShadTable>
       </div>
 
-      {/* Mobile Cards (solo contrato, nombre, tipo de servicio si cabe, status, acciones) */}
-      <div className="sm:hidden space-y-4">
+      {/* Mobile Cards (< 768px) - solo contrato, nombre, tipo de servicio si cabe, status, acciones */}
+      <div className="md:hidden space-y-4">
         {data?.map((user, i) => (
           <div key={i} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
             <div className="flex items-start justify-between mb-3">
@@ -141,8 +141,8 @@ export const Table: FC<TableProps> = ({ data, handleUpdateCliente, handleRegiste
         ))}
       </div>
 
-      {/* Tablet Cards (contrato, nombre, tipo de servicio, localidad, status, acciones) */}
-      <div className="hidden sm:block md:hidden space-y-4">
+      {/* Tablet Cards (768px - 1023px) - contrato, nombre, tipo de servicio, localidad, status, acciones */}
+      <div className="hidden md:block lg:hidden space-y-4">
         {data?.map((user, i) => (
           <div key={i} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
             <div className="flex items-start justify-between mb-3">
