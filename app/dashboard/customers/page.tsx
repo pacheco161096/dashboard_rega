@@ -131,6 +131,12 @@ export default function Customers() {
     router.replace("/dashboard/cobranza");
   };
 
+  /* Tickets */
+  const handleCreateTicket = useCallback((user: User[]) => {
+    const clienteId = user[0]?.id?.toString() || "";
+    router.push(`/dashboard/reportes?create=true&clienteId=${clienteId}`);
+  }, [router]);
+
   const handleFilter = useCallback((item: string) => {
     setSearchQuery(item);
     setCurrentPage(1); // Resetear a la primera página al buscar
@@ -203,6 +209,7 @@ export default function Customers() {
                   data={paginatedData} 
                   handleUpdateCliente={handleUpdateCliente} 
                   handleRegisterPay={handleRegisterPay}
+                  handleCreateTicket={handleCreateTicket}
                 />
                 {/* Controles de paginación */}
                 {totalPages > 1 && (

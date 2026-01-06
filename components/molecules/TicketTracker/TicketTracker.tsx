@@ -8,9 +8,26 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, Eye, Calendar, User, FileText, Clock, Loader2, Save } from "lucide-react"
+import { Search, Eye, Calendar, User, FileText, Clock, Loader2, Save, MapPin, Phone } from "lucide-react"
 import { ticketService } from "@/lib/ticketService"
 import { TicketListResponse, TicketRequest, TicketActualizacion } from "@/types/ticket"
+import axios from "axios"
+
+// Lista hardcodeada de técnicos
+const TECNICOS = [
+  { id: "1", nombre: "Juan Pérez" },
+  { id: "3", nombre: "Carlos Rodríguez" },
+  { id: "5", nombre: "Luis Hernández" },
+  { id: "7", nombre: "Pedro López" },
+  { id: "9", nombre: "Roberto Torres" },
+]
+
+interface ClienteInfo {
+  nombre: string;
+  apellido: string;
+  direccion: string;
+  telefono: string;
+}
 
 interface Ticket {
   id: string;
@@ -23,6 +40,8 @@ interface Ticket {
   fechaCreacion: string;
   ultimaActualizacion: string;
   actualizaciones: TicketActualizacion[]; // Array de actualizaciones/comentarios
+  clienteInfo?: ClienteInfo; // Información del cliente
+  nombreTecnico?: string; // Nombre del técnico
 }
 
 interface TicketTrackerProps {
@@ -59,27 +78,57 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
           return dateB - dateA // Orden descendente (más nuevos primero)
         })
         
-        // Transformar los datos de la API al formato del componente
-        const transformedTickets: Ticket[] = sortedData.map((ticket) => {
-          const actualizaciones = ticket.attributes.actualizacion || []
-          // Obtener la primera descripción de las actualizaciones (descripción inicial del problema)
-          const primeraDescripcion = actualizaciones.length > 0 
-            ? actualizaciones[0].descripcion 
-            : "Sin descripción disponible"
-          
-          return {
-            id: `TK-${ticket.id.toString().padStart(3, '0')}`,
-            idReal: ticket.id, // Guardar el ID real para actualizaciones
-            fecha: ticket.attributes.fecha,
-            id_cliente: ticket.attributes.id_cliente,
-            estatus: ticket.attributes.estatus,
-            id_tecnico: ticket.attributes.id_tecnico || "",
-            descripcion: primeraDescripcion,
-            fechaCreacion: new Date(ticket.attributes.createdAt).toLocaleString('es-ES'),
-            ultimaActualizacion: new Date(ticket.attributes.updatedAt).toLocaleString('es-ES'),
-            actualizaciones: actualizaciones,
+        // Obtener todos los clientes de la API
+        const clientesMap = new Map<string, ClienteInfo>()
+        try {
+          const clientesResponse = await axios.get('https://monkfish-app-2et8k.ondigitalocean.app/api/users?populate=*')
+          if (clientesResponse.data && Array.isArray(clientesResponse.data)) {
+            clientesResponse.data.forEach((cliente: any) => {
+              const direccion = `${cliente.calle || ''} ${cliente.num_exterior || ''} ${cliente.num_interior || ''}, ${cliente.colonia || ''}, ${cliente.ciudad || ''}`.trim(); 
+              clientesMap.set(cliente.id.toString(), {
+                nombre: cliente.nombre || '',
+                apellido: cliente.apellido || '',
+                direccion: direccion || 'Sin dirección',
+                telefono: cliente.celular || 'Sin teléfono'
+              })
+            })
           }
-        })
+        } catch (error) {
+          console.error("Error al cargar clientes:", error)
+        }
+
+        // Transformar los datos de la API al formato del componente
+        const transformedTickets: Ticket[] = await Promise.all(
+          sortedData.map(async (ticket) => {
+            const actualizaciones = ticket.attributes.actualizacion || []
+            // Obtener la primera descripción de las actualizaciones (descripción inicial del problema)
+            const primeraDescripcion = actualizaciones.length > 0 
+              ? actualizaciones[0].descripcion 
+              : "Sin descripción disponible"
+            
+            // Obtener información del cliente
+            const clienteInfo = clientesMap.get(ticket.attributes.id_cliente)
+            
+            // Obtener nombre del técnico
+            const tecnico = TECNICOS.find(t => t.id === ticket.attributes.id_tecnico)
+            const nombreTecnico = tecnico ? tecnico.nombre : (ticket.attributes.id_tecnico || "No asignado")
+            
+            return {
+              id: `TK-${ticket.id.toString().padStart(3, '0')}`,
+              idReal: ticket.id, // Guardar el ID real para actualizaciones
+              fecha: ticket.attributes.fecha,
+              id_cliente: ticket.attributes.id_cliente,
+              estatus: ticket.attributes.estatus,
+              id_tecnico: ticket.attributes.id_tecnico || "",
+              descripcion: primeraDescripcion,
+              fechaCreacion: new Date(ticket.attributes.createdAt).toLocaleString('es-ES'),
+              ultimaActualizacion: new Date(ticket.attributes.updatedAt).toLocaleString('es-ES'),
+              actualizaciones: actualizaciones,
+              clienteInfo: clienteInfo,
+              nombreTecnico: nombreTecnico,
+            }
+          })
+        )
         
         setTickets(transformedTickets)
       } catch (error: any) {
@@ -151,6 +200,26 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
       // Recargar los tickets para reflejar los cambios
       const ticketsResponse: TicketListResponse = await ticketService.getTickets()
       
+      // Obtener todos los clientes de la API
+      const clientesMap = new Map<string, ClienteInfo>()
+      try {
+        const clientesResponse = await axios.get('https://monkfish-app-2et8k.ondigitalocean.app/api/users?populate=*')
+        if (clientesResponse.data && Array.isArray(clientesResponse.data)) {
+          clientesResponse.data.forEach((cliente: any) => {
+            const direccion = `${cliente.calle || ''} ${cliente.num_exterior || ''} ${cliente.num_interior || ''}`.trim() || 
+                             `${cliente.colonia || ''}, ${cliente.ciudad || ''}, ${cliente.estado || ''}`.trim()
+            clientesMap.set(cliente.id.toString(), {
+              nombre: cliente.nombre || '',
+              apellido: cliente.apellido || '',
+              direccion: direccion || 'Sin dirección',
+              telefono: cliente.celular || 'Sin teléfono'
+            })
+          })
+        }
+      } catch (error) {
+        console.error("Error al cargar clientes:", error)
+      }
+      
       // Ordenar por fecha de creación (más nuevos primero) antes de transformar
       const sortedData = [...ticketsResponse.data].sort((a, b) => {
         const dateA = new Date(a.attributes.createdAt).getTime()
@@ -165,6 +234,13 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
           ? actualizaciones[0].descripcion 
           : "Sin descripción disponible"
         
+        // Obtener información del cliente
+        const clienteInfo = clientesMap.get(ticket.attributes.id_cliente)
+        
+        // Obtener nombre del técnico
+        const tecnico = TECNICOS.find(t => t.id === ticket.attributes.id_tecnico)
+        const nombreTecnico = tecnico ? tecnico.nombre : (ticket.attributes.id_tecnico || "No asignado")
+        
         return {
           id: `TK-${ticket.id.toString().padStart(3, '0')}`,
           idReal: ticket.id,
@@ -176,6 +252,8 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
           fechaCreacion: new Date(ticket.attributes.createdAt).toLocaleString('es-ES'),
           ultimaActualizacion: new Date(ticket.attributes.updatedAt).toLocaleString('es-ES'),
           actualizaciones: actualizaciones,
+          clienteInfo: clienteInfo,
+          nombreTecnico: nombreTecnico,
         }
       })
       
@@ -360,7 +438,7 @@ console.log('filteredTickets', filteredTickets)
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
                           <div className="flex items-center gap-2 text-sm text-gray-600">
                             <User className="h-4 w-4" />
-                            <span>Cliente: {ticket.id_cliente}</span>
+                            <span>Cliente: {ticket.clienteInfo ? `${ticket.clienteInfo.nombre} ${ticket.clienteInfo.apellido}`.trim() : ticket.id_cliente}</span>
                           </div>
                           <div className="flex items-center gap-2 text-sm text-gray-600">
                             <Calendar className="h-4 w-4" />
@@ -368,7 +446,7 @@ console.log('filteredTickets', filteredTickets)
                           </div>
                           <div className="flex items-center gap-2 text-sm text-gray-600">
                             <Clock className="h-4 w-4" />
-                            <span>Actualizado: {ticket.ultimaActualizacion}</span>
+                            <span>Técnico: {ticket.nombreTecnico}</span>
                           </div>
                         </div>
 
@@ -400,7 +478,7 @@ console.log('filteredTickets', filteredTickets)
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label className="font-semibold">ID del Ticket</Label>
                     <p className="text-gray-700">{selectedTicket.id}</p>
@@ -412,13 +490,35 @@ console.log('filteredTickets', filteredTickets)
                     </div>
                   </div>
                   <div>
-                    <Label className="font-semibold">ID Cliente</Label>
-                    <p className="text-gray-700">{selectedTicket.id_cliente}</p>
+                    <Label className="font-semibold">Cliente</Label>
+                    <p className="text-gray-700">
+                      {selectedTicket.clienteInfo 
+                        ? `${selectedTicket.clienteInfo.nombre} ${selectedTicket.clienteInfo.apellido}`.trim() 
+                        : `ID: ${selectedTicket.id_cliente}`}
+                    </p>
                   </div>
                   <div>
-                    <Label className="font-semibold">ID Técnico</Label>
-                    <p className="text-gray-700">{selectedTicket.id_tecnico}</p>
+                    <Label className="font-semibold">Técnico</Label>
+                    <p className="text-gray-700">{selectedTicket.nombreTecnico}</p>
                   </div>
+                  {selectedTicket.clienteInfo && (
+                    <>
+                      <div className="md:col-span-2">
+                        <Label className="font-semibold">Dirección</Label>
+                        <p className="text-gray-700 flex items-center gap-1">
+                          <MapPin className="h-4 w-4" />
+                          {selectedTicket.clienteInfo.direccion}
+                        </p>
+                      </div>
+                      <div>
+                        <Label className="font-semibold">Teléfono</Label>
+                        <p className="text-gray-700 flex items-center gap-1">
+                          <Phone className="h-4 w-4" />
+                          {selectedTicket.clienteInfo.telefono}
+                        </p>
+                      </div>
+                    </>
+                  )}
                   <div>
                     <Label className="font-semibold">Fecha de Creación</Label>
                     <p className="text-gray-700">{selectedTicket.fechaCreacion}</p>

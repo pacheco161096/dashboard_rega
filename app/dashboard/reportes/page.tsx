@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback, useMemo, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { PlusCircle, Search, TicketIcon, ArrowLeft, FileText, Clock, Loader2 } from "lucide-react"
@@ -13,7 +14,9 @@ import { useTicketStats } from "@/hooks/useTicketStats"
 type ViewType = "dashboard" | "create" | "track"
 
 export default function Reportes() {
+  const searchParams = useSearchParams()
   const [currentView, setCurrentView] = useState<ViewType>("dashboard")
+  const [clienteId, setClienteId] = useState<string>("")
   const { isLoading, error, success, submitTicket } = useTicketForm()
   const { total, enProceso, finalizados, isLoading: statsLoading, refreshStats } = useTicketStats()
 
@@ -47,6 +50,17 @@ export default function Reportes() {
     }
   }, [currentView, refreshStats])
 
+  // Verificar parámetros de URL para crear ticket con cliente pre-seleccionado
+  useEffect(() => {
+    const createParam = searchParams.get("create")
+    const clienteIdParam = searchParams.get("clienteId")
+    
+    if (createParam === "true" && clienteIdParam) {
+      setCurrentView("create")
+      setClienteId(clienteIdParam)
+    }
+  }, [searchParams])
+
   // Memoizar la vista renderizada
   const renderedView = useMemo(() => {
     switch (currentView) {
@@ -70,6 +84,7 @@ export default function Reportes() {
             <TicketForm 
               handleSubmit={handleSubmit} 
               isLoading={isLoading}
+              initialClienteId={clienteId}
             />
           </div>
         )
@@ -89,10 +104,10 @@ export default function Reportes() {
         )
       default:
         return (
-          <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-            <div className="w-full max-w-4xl">
+          <div className="min-h-screen bg-white p-6">
+            <div className="w-full max-w-4xl mx-auto">
               {/* Header */}
-              <div className="text-center mb-8">
+              <div className="text-center mb-8 pt-4">
                 <div className="flex items-center justify-center gap-3 mb-4">
                   <TicketIcon className="h-10 w-10 text-blue-600" />
                   <h1 className="text-4xl font-bold text-gray-900">Sistema de Tickets</h1>
@@ -154,7 +169,7 @@ export default function Reportes() {
               </div>
 
               {/* Stats Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                 <Card className="bg-blue-50 border-blue-200">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3">
@@ -222,7 +237,7 @@ export default function Reportes() {
           </div>
         )
     }
-  }, [currentView, error, success, isLoading, handleSubmit, handleBackToDashboard, handleViewChange, total, enProceso, finalizados, statsLoading])
+  }, [currentView, error, isLoading, handleSubmit, handleBackToDashboard, handleViewChange, total, enProceso, finalizados, statsLoading, clienteId, refreshStats])
 
   return <div>{renderedView}</div>
 }
