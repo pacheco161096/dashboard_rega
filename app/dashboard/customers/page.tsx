@@ -5,6 +5,7 @@ import { Button, SearchBox, Table, CreateCustomer,CustomerForm} from "@/componen
 import axios from 'axios';
 import s from './customers.module.css'
 import { useRouter } from "next/navigation";
+import { getUserPermissions } from "@/lib/roles";
 
 export type Role = {
   id: number;
@@ -81,6 +82,7 @@ export default function Customers() {
   const [searchQuery, setSearchQuery] = useState("");
   const itemsPerPage = 10;
   const router = useRouter();
+  const permissions = getUserPermissions();
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -179,10 +181,12 @@ export default function Customers() {
       
       {/* Header con acciones */}
       <div className={s.header}>
-        <Button onClick={handleNewCliente} variant="primary" size="md" className="flex items-center gap-2">
-          <i className="fa-solid fa-plus text-sm"></i>
-          <span>Nuevo Cliente</span>
-        </Button>
+        {permissions?.canCreateClient && (
+          <Button onClick={handleNewCliente} variant="primary" size="md" className="flex items-center gap-2">
+            <i className="fa-solid fa-plus text-sm"></i>
+            <span>Nuevo Cliente</span>
+          </Button>
+        )}
         <SearchBox handleFilter={handleFilter} />
       </div>
 

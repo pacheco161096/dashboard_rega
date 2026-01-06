@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { PencilIcon, TrashIcon } from "@primer/octicons-react"
 import { useToast } from "@/hooks/use-toast"
+import { ROLES_ARRAY } from "@/lib/roles"
 
 interface Usuario {
   id: number
@@ -21,12 +22,7 @@ interface Usuario {
   }
 }
 
-const ROLES = [
-  { id: 1, name: "Admin", value: "1" },
-  { id: 2, name: "Supervisor", value: "2" },
-  { id: 3, name: "Cajero", value: "3" },
-  { id: 4, name: "Tecnico", value: "4" },
-]
+const ROLES = ROLES_ARRAY
 
 const API_BASE_URL = 'https://monkfish-app-2et8k.ondigitalocean.app/api'
 
@@ -100,15 +96,15 @@ export default function Usuarios() {
   }, [usuarios, searchQuery])
 
   // Manejar cambios en el formulario
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = useCallback((field: string, value: string) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
     }))
-  }
+  }, [])
 
   // Limpiar formulario
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setFormData({
       nombre: "",
       username: "",
@@ -118,7 +114,7 @@ export default function Usuarios() {
     })
     setIsEditing(false)
     setSelectedUsuario(null)
-  }
+  }, [])
 
   // Abrir modal para crear usuario (solo en pantallas pequeñas)
   const handleNewUsuario = () => {
@@ -146,13 +142,13 @@ export default function Usuarios() {
   }
 
   // Cerrar modal y limpiar form
-  const handleCloseModal = () => {
+  const handleCloseModal = useCallback(() => {
     setShowFormModal(false)
     resetForm()
-  }
+  }, [resetForm])
 
   // Crear usuario
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleCreate = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
     
     try {
@@ -184,10 +180,10 @@ export default function Usuarios() {
         variant: "destructive",
       })
     }
-  }
+  }, [formData, toast, resetForm, fetchUsuarios])
 
   // Actualizar usuario
-  const handleUpdate = async (e: React.FormEvent) => {
+  const handleUpdate = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!selectedUsuario) return
@@ -237,7 +233,7 @@ export default function Usuarios() {
         variant: "destructive",
       })
     }
-  }
+  }, [formData, selectedUsuario, toast, resetForm, fetchUsuarios])
 
   // Eliminar usuario
   const handleDelete = async () => {
@@ -275,8 +271,8 @@ export default function Usuarios() {
     setSearchQuery(query)
   }
 
-  // Componente del formulario
-  const FormContent = () => (
+  // Componente del formulario - Las funciones están memorizadas para evitar pérdida de foco
+  const renderForm = () => (
     <form onSubmit={isEditing ? handleUpdate : handleCreate} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="nombre">Nombre</Label>
@@ -529,7 +525,7 @@ export default function Usuarios() {
           <h2 className="text-xl font-semibold text-gray-900 mb-6">
             {isEditing ? "Actualizar Usuario" : "Crear Usuario"}
           </h2>
-          <FormContent />
+          {renderForm()}
         </div>
       </div>
 
@@ -547,7 +543,7 @@ export default function Usuarios() {
                 {isEditing ? "Actualizar Usuario" : "Crear Usuario"}
               </DialogTitle>
             </DialogHeader>
-            <FormContent />
+            {renderForm()}
           </DialogContent>
         </Dialog>
       </div>

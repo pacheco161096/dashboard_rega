@@ -10,6 +10,7 @@ import TicketTracker from "@/components/molecules/TicketTracker/TicketTracker"
 import { TicketFormData } from "@/types/ticket"
 import { useTicketForm } from "@/hooks/useTicketForm"
 import { useTicketStats } from "@/hooks/useTicketStats"
+import { getUserPermissions } from "@/lib/roles"
 
 type ViewType = "dashboard" | "create" | "track"
 
@@ -19,6 +20,7 @@ export default function Reportes() {
   const [clienteId, setClienteId] = useState<string>("")
   const { isLoading, error, success, submitTicket } = useTicketForm()
   const { total, enProceso, finalizados, isLoading: statsLoading, refreshStats } = useTicketStats()
+  const permissions = getUserPermissions()
 
   // Memoizar handlers de cambio de vista
   const handleViewChange = useCallback((view: ViewType) => {
@@ -116,35 +118,37 @@ export default function Reportes() {
               </div>
 
               {/* Dashboard Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                {/* Crear Nuevo Ticket */}
-                <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-blue-200">
-                  <CardHeader className="text-center pb-4">
-                    <div className="flex justify-center mb-3">
-                      <div className="p-3 bg-blue-100 rounded-full">
-                        <PlusCircle className="h-8 w-8 text-blue-600" />
+              <div className={`grid gap-6 mb-8 ${permissions?.canCreateTicket ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
+                {/* Crear Nuevo Ticket - Solo visible si tiene permiso */}
+                {permissions?.canCreateTicket && (
+                  <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-blue-200 flex flex-col h-full">
+                    <CardHeader className="text-center pb-4 flex-1">
+                      <div className="flex justify-center mb-3">
+                        <div className="p-3 bg-blue-100 rounded-full">
+                          <PlusCircle className="h-8 w-8 text-blue-600" />
+                        </div>
                       </div>
-                    </div>
-                    <CardTitle className="text-xl text-gray-900">Crear Nuevo Ticket</CardTitle>
-                    <CardDescription className="text-gray-600">
-                      Levanta un nuevo ticket de soporte con toda la información necesaria
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <Button
-                      onClick={() => handleViewChange("create")}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                      size="lg"
-                    >
-                      <PlusCircle className="h-5 w-5 mr-2" />
-                      Crear Ticket
-                    </Button>
-                  </CardContent>
-                </Card>
+                      <CardTitle className="text-xl text-gray-900">Crear Nuevo Ticket</CardTitle>
+                      <CardDescription className="text-gray-600">
+                        Levanta un nuevo ticket de soporte con toda la información necesaria
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-0 mt-auto">
+                      <Button
+                        onClick={() => handleViewChange("create")}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                        size="lg"
+                      >
+                        <PlusCircle className="h-5 w-5 mr-2" />
+                        Crear Ticket
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Seguimiento de Tickets */}
-                <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-green-200">
-                  <CardHeader className="text-center pb-4">
+                <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-green-200 flex flex-col h-full">
+                  <CardHeader className="text-center pb-4 flex-1">
                     <div className="flex justify-center mb-3">
                       <div className="p-3 bg-green-100 rounded-full">
                         <Search className="h-8 w-8 text-green-600" />
@@ -155,7 +159,7 @@ export default function Reportes() {
                       Consulta el estado y progreso de tus tickets anteriores
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="pt-0">
+                  <CardContent className="pt-0 mt-auto">
                     <Button
                       onClick={() => handleViewChange("track")}
                       className="w-full bg-green-600 hover:bg-green-700 text-white"
@@ -237,7 +241,7 @@ export default function Reportes() {
           </div>
         )
     }
-  }, [currentView, error, isLoading, handleSubmit, handleBackToDashboard, handleViewChange, total, enProceso, finalizados, statsLoading, clienteId, refreshStats])
+  }, [currentView, error, isLoading, handleSubmit, handleBackToDashboard, handleViewChange, total, enProceso, finalizados, statsLoading, clienteId, refreshStats, permissions])
 
   return <div>{renderedView}</div>
 }

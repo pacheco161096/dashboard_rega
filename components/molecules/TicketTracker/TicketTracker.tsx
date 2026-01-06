@@ -12,6 +12,7 @@ import { Search, Eye, Calendar, User, FileText, Clock, Loader2, Save, MapPin, Ph
 import { ticketService } from "@/lib/ticketService"
 import { TicketListResponse, TicketRequest, TicketActualizacion } from "@/types/ticket"
 import axios from "axios"
+import { getUserPermissions } from "@/lib/roles"
 
 // Lista hardcodeada de técnicos
 const TECNICOS = [
@@ -60,6 +61,7 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
   const [updateError, setUpdateError] = useState<string | null>(null)
   const [updateSuccess, setUpdateSuccess] = useState(false)
   const [ticketDetails, setTicketDetails] = useState<any>(null) // Detalles completos del ticket
+  const permissions = getUserPermissions()
 
   // Cargar tickets desde la API
   useEffect(() => {
@@ -565,8 +567,8 @@ console.log('filteredTickets', filteredTickets)
                   )}
                 </div>
 
-                {/* Sección para cambiar estatus - Solo si no está finalizado */}
-                {selectedTicket.estatus !== "Finalizado" && (
+                {/* Sección para cambiar estatus - Solo si no está finalizado y tiene permiso */}
+                {selectedTicket.estatus !== "Finalizado" && permissions?.canUpdateTicketStatus && (
                   <div className="border-t pt-4 mt-4">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">Cambiar Estatus del Ticket</h3>
                     
