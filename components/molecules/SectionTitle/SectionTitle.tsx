@@ -7,6 +7,7 @@ const sectionNames: Record<string, string> = {
   '/dashboard/cobranza': 'Cobranza',
   '/dashboard/almacen': 'Almacén',
   '/dashboard/reportes': 'Reportes',
+  '/dashboard/usuarios': 'Usuarios',
 }
 
 export function SectionTitle() {

@@ -2,6 +2,7 @@
 
 import { FC } from "react"
 import { CreditCardIcon, PencilIcon } from "@primer/octicons-react"
+import { FileText } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -19,9 +20,10 @@ interface TableProps {
   data: User[] | undefined
   handleUpdateCliente: (user: User[]) => void
   handleRegisterPay: (user: User[]) => void
+  handleCreateTicket: (user: User[]) => void
 }
 
-export const Table: FC<TableProps> = ({ data, handleUpdateCliente, handleRegisterPay }) => {
+export const Table: FC<TableProps> = ({ data, handleUpdateCliente, handleRegisterPay, handleCreateTicket }) => {
   return (
     <>
       {/* Desktop Table - Solo visible desde 1024px (lg) */}
@@ -70,6 +72,15 @@ export const Table: FC<TableProps> = ({ data, handleUpdateCliente, handleRegiste
                       title="Registrar pago"
                     >
                       <CreditCardIcon size={16} />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9 bg-green-600 text-white hover:bg-green-700 border-green-600 transition-colors"
+                      onClick={() => handleCreateTicket([user])}
+                      title="Crear reporte"
+                    >
+                      <FileText size={16} />
                     </Button>
                     <Button
                       variant="outline"
@@ -126,6 +137,15 @@ export const Table: FC<TableProps> = ({ data, handleUpdateCliente, handleRegiste
                 title="Registrar pago"
               >
                 <CreditCardIcon size={18} />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-10 w-10 bg-green-600 text-white hover:bg-green-700 border-green-600 transition-colors"
+                onClick={() => handleCreateTicket([user])}
+                title="Crear reporte"
+              >
+                <FileText size={18} />
               </Button>
               <Button
                 variant="outline"
@@ -187,6 +207,15 @@ export const Table: FC<TableProps> = ({ data, handleUpdateCliente, handleRegiste
                 title="Registrar pago"
               >
                 <CreditCardIcon size={18} />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-10 w-10 bg-green-600 text-white hover:bg-green-700 border-green-600 transition-colors"
+                onClick={() => handleCreateTicket([user])}
+                title="Crear reporte"
+              >
+                <FileText size={18} />
               </Button>
               <Button
                 variant="outline"

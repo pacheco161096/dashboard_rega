@@ -12,12 +12,22 @@ import { Textarea } from "@/components/ui/textarea"
 import { CalendarIcon, TicketIcon, Loader2 } from "lucide-react"
 import { TicketFormData } from "@/types/ticket"
 
+// Lista hardcodeada de técnicos
+const TECNICOS = [
+  { id: "1", nombre: "Juan Pérez" },
+  { id: "3", nombre: "Carlos Rodríguez" },
+  { id: "5", nombre: "Luis Hernández" },
+  { id: "7", nombre: "Pedro López" },
+  { id: "9", nombre: "Roberto Torres" },
+]
+
 interface TicketFormProps {
   handleSubmit: (formData: TicketFormData, e: React.FormEvent) => void;
   isLoading?: boolean;
+  initialClienteId?: string;
 }
 
-export default function TicketForm({ handleSubmit, isLoading = false }: TicketFormProps) {
+export default function TicketForm({ handleSubmit, isLoading = false, initialClienteId = "" }: TicketFormProps) {
   // Función para obtener la fecha actual en formato YYYY-MM-DD
   const getCurrentDate = () => {
     const today = new Date()
@@ -29,11 +39,21 @@ export default function TicketForm({ handleSubmit, isLoading = false }: TicketFo
 
   const [formData, setFormData] = useState<TicketFormData>({
     fecha: getCurrentDate(),
-    id_cliente: "",
+    id_cliente: initialClienteId,
     estatus: "En proceso",
     id_tecnico: "",
     descripcion: "",
   })
+
+  // Actualizar id_cliente si cambia initialClienteId
+  useEffect(() => {
+    if (initialClienteId) {
+      setFormData((prev) => ({
+        ...prev,
+        id_cliente: initialClienteId,
+      }))
+    }
+  }, [initialClienteId])
 
   const handleInputChange = (field: keyof TicketFormData, value: string) => {
     setFormData((prev) => ({
@@ -62,10 +82,10 @@ export default function TicketForm({ handleSubmit, isLoading = false }: TicketFo
           <CardContent className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Fecha */}
-              <div className="space-y-2">
-                <Label htmlFor="fecha" className="flex items-center gap-2">
-                  <CalendarIcon className="h-4 w-4" />
-                  Fecha
+              <div className="flex flex-col">
+                <Label htmlFor="fecha" className="flex items-center gap-2 mb-2 h-5">
+                  <CalendarIcon className="h-4 w-4 flex-shrink-0" />
+                  <span>Fecha</span>
                 </Label>
                 <Input
                   id="fecha"
@@ -73,14 +93,14 @@ export default function TicketForm({ handleSubmit, isLoading = false }: TicketFo
                   value={formData.fecha}
                   onChange={(e) => handleInputChange("fecha", e.target.value)}
                   required
-                  className="w-full"
+                  className="w-full h-9"
                   disabled={isLoading}
                 />
               </div>
 
               {/* ID Cliente */}
-              <div className="space-y-2">
-                <Label htmlFor="id_cliente">ID Cliente</Label>
+              <div className="flex flex-col">
+                <Label htmlFor="id_cliente" className="mb-2 h-5 flex items-center">ID Cliente</Label>
                 <Input
                   id="id_cliente"
                   type="text"
@@ -88,23 +108,21 @@ export default function TicketForm({ handleSubmit, isLoading = false }: TicketFo
                   value={formData.id_cliente}
                   onChange={(e) => handleInputChange("id_cliente", e.target.value)}
                   required
-                  className="w-full"
+                  className="w-full h-9"
                   disabled={isLoading}
                 />
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Estatus */}
-              <div className="space-y-2">
-                <Label htmlFor="estatus">Estatus</Label>
+              <div className="flex flex-col">
+                <Label htmlFor="estatus" className="mb-2 h-5 flex items-center">Estatus</Label>
                 <Select
                   value={formData.estatus}
                   onValueChange={(value) => handleInputChange("estatus", value)}
                   required
                   disabled={isLoading}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full h-9">
                     <SelectValue placeholder="Seleccione el estatus" />
                   </SelectTrigger>
                   <SelectContent>
@@ -114,18 +132,26 @@ export default function TicketForm({ handleSubmit, isLoading = false }: TicketFo
                 </Select>
               </div>
 
-              {/* ID Técnico */}
-              <div className="space-y-2">
-                <Label htmlFor="id_tecnico">ID Técnico</Label>
-                <Input
-                  id="id_tecnico"
-                  type="text"
+              {/* Técnico */}
+              <div className="flex flex-col">
+                <Label htmlFor="id_tecnico" className="mb-2 h-5 flex items-center">Técnico</Label>
+                <Select
                   value={formData.id_tecnico}
-                  onChange={(e) => handleInputChange("id_tecnico", e.target.value)}
-                  className="w-full bg-gray-50"
+                  onValueChange={(value) => handleInputChange("id_tecnico", value)}
                   disabled={isLoading}
-                />
-                <p className="text-xs text-gray-500">ID del técnico asignado por defecto</p>
+                >
+                  <SelectTrigger className="w-full h-9">
+                    <SelectValue placeholder="Seleccione un técnico" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TECNICOS.map((tecnico) => (
+                      <SelectItem key={tecnico.id} value={tecnico.id}>
+                        {tecnico.nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-500 mt-1 h-4">Seleccione el técnico asignado</p>
               </div>
             </div>
 
@@ -159,7 +185,7 @@ export default function TicketForm({ handleSubmit, isLoading = false }: TicketFo
                   <span className="font-medium">Estatus:</span> {formData.estatus || "No seleccionado"}
                 </div>
                 <div>
-                  <span className="font-medium">Técnico:</span> {formData.id_tecnico}
+                  <span className="font-medium">Técnico:</span> {TECNICOS.find(t => t.id === formData.id_tecnico)?.nombre || formData.id_tecnico || "No asignado"}
                 </div>
               </div>
             </div>
