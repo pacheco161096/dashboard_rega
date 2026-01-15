@@ -1,53 +1,61 @@
 'use client'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { NavItem } from '@/components/atoms/NavItem/NavItem'
 import s from './Navbar.module.css'
 import { HomeIcon, PeopleIcon, PackageIcon, CreditCardIcon } from '@primer/octicons-react'
 import { usePathname } from "next/navigation";
 import { ChartBarIcon, UserCog } from 'lucide-react';
+import { getUserPermissions } from '@/lib/roles';
 
 export const Navbar = () => {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const permissions = getUserPermissions();
   
-  const nameLinks = [
+  // Definir todos los links posibles
+  const allLinks = [
     {
       name:'Inicio',
       href:'/dashboard',
       tooltip:'Inicio',
-      icon:<HomeIcon size={20}/>
+      icon:<HomeIcon size={20}/>,
+      permission: 'canAccessInicio'
     },
     {
       name:'Clientes',
       href:'/dashboard/customers',
       tooltip:'Clientes',
-      icon:<PeopleIcon size={20}/>
+      icon:<PeopleIcon size={20}/>,
+      permission: 'canAccessClientes'
     },
-    // {
-    //   name:'Almacen',
-    //   href:'/dashboard/almacen',
-    //   tooltip:'Almacen',
-    //   icon:<PackageIcon size={20}/>
-    // },
     {
       name:'Cobranza',
       href:'/dashboard/cobranza',
       tooltip:'Cobranza', 
-      icon:<CreditCardIcon size={20}/>
+      icon:<CreditCardIcon size={20}/>,
+      permission: 'canAccessCobranza'
     },
     {
       name:'Reportes',
       href:'/dashboard/reportes',
       tooltip:'Reportes', 
-      icon:<ChartBarIcon  size={20}/>
+      icon:<ChartBarIcon  size={20}/>,
+      permission: 'canAccessReportes'
     },
     {
       name:'Usuarios',
       href:'/dashboard/usuarios',
       tooltip:'Usuarios', 
-      icon:<UserCog  size={20}/>
+      icon:<UserCog  size={20}/>,
+      permission: 'canAccessUsuarios'
     },
   ]
+  
+  // Filtrar links según permisos
+  const nameLinks = useMemo(() => {
+    if (!permissions) return allLinks; // Si no hay permisos, mostrar todos (fallback)
+    return allLinks.filter(link => permissions[link.permission as keyof typeof permissions] === true);
+  }, [permissions]);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);

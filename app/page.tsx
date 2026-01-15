@@ -4,6 +4,7 @@ import Image from 'next/image'
 import logo from '../media/logo.png'
 import axios from 'axios'
 import { useRouter } from 'next/navigation'
+import { getRedirectPathByRole, UserRole } from '@/lib/roles'
 
 const Page = ({}) => {
   const [error, setError] = useState<string | null>(null);
@@ -20,18 +21,30 @@ const Page = ({}) => {
 
     try {
       const response = await axios.get(
-        `https://monkfish-app-2et8k.ondigitalocean.app/api/usuarios?filters[usuario][$eq]=${user}&filters[contrasena][$eq]=${password}`
+        `https://monkfish-app-2et8k.ondigitalocean.app/api/usuarios?filters[usuario][$eq]=${user}&filters[contrasena][$eq]=${password}&populate=role`
       )
       if (response.data?.data?.length > 0) {
         const { data } = response.data
+        // Obtener el rol del usuario
+        const roleId = data[0].attributes.role?.data?.id?.toString() || 
+                      data[0].attributes.role?.id?.toString() || 
+                      data[0].attributes.role?.toString() || 
+                      null
+        
+        const finalRole = roleId || "1"; // Por defecto Admin si no tiene rol asignado
+        
         const loginUser = {
           id: data[0].id,
           nombre: data[0].attributes.nombre,
           email: data[0].attributes.email,
+          role: finalRole,
         }
         sessionStorage.setItem("loginUser", JSON.stringify(loginUser));
         setError(null);
-        router.replace('/dashboard');
+        
+        // Redirigir según el rol
+        const redirectPath = getRedirectPathByRole(finalRole as UserRole);
+        router.replace(redirectPath);
       } else {
         setError("ErrorData");
       }

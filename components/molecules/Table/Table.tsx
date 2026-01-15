@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table"
 
 import { User } from "@/app/dashboard/customers/page"
+import { getUserPermissions } from "@/lib/roles"
 
 interface TableProps {
   data: User[] | undefined
@@ -24,6 +25,8 @@ interface TableProps {
 }
 
 export const Table: FC<TableProps> = ({ data, handleUpdateCliente, handleRegisterPay, handleCreateTicket }) => {
+  const permissions = getUserPermissions()
+  
   return (
     <>
       {/* Desktop Table - Solo visible desde 1024px (lg) */}
@@ -64,33 +67,39 @@ export const Table: FC<TableProps> = ({ data, handleUpdateCliente, handleRegiste
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center justify-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-9 w-9 bg-blue-600 text-white hover:bg-blue-700 border-blue-600 transition-colors"
-                      onClick={() => handleRegisterPay([user])}
-                      title="Registrar pago"
-                    >
-                      <CreditCardIcon size={16} />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-9 w-9 bg-green-600 text-white hover:bg-green-700 border-green-600 transition-colors"
-                      onClick={() => handleCreateTicket([user])}
-                      title="Crear reporte"
-                    >
-                      <FileText size={16} />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-9 w-9 bg-yellow-500 text-white hover:bg-yellow-600 border-yellow-500 transition-colors"
-                      onClick={() => handleUpdateCliente([user])}
-                      title="Editar cliente"
-                    >
-                      <PencilIcon size={16} />
-                    </Button>
+                    {permissions?.canAccessCobranza && (
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-9 w-9 bg-blue-600 text-white hover:bg-blue-700 border-blue-600 transition-colors"
+                        onClick={() => handleRegisterPay([user])}
+                        title="Registrar pago"
+                      >
+                        <CreditCardIcon size={16} />
+                      </Button>
+                    )}
+                    {permissions?.canCreateReport && (
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-9 w-9 bg-green-600 text-white hover:bg-green-700 border-green-600 transition-colors"
+                        onClick={() => handleCreateTicket([user])}
+                        title="Crear reporte"
+                      >
+                        <FileText size={16} />
+                      </Button>
+                    )}
+                    {permissions?.canEditClient && (
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-9 w-9 bg-yellow-500 text-white hover:bg-yellow-600 border-yellow-500 transition-colors"
+                        onClick={() => handleUpdateCliente([user])}
+                        title="Editar cliente"
+                      >
+                        <PencilIcon size={16} />
+                      </Button>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>
@@ -129,33 +138,39 @@ export const Table: FC<TableProps> = ({ data, handleUpdateCliente, handleRegiste
               </Badge>
             </div>
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100">
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-10 w-10 bg-blue-600 text-white hover:bg-blue-700 border-blue-600 transition-colors"
-                onClick={() => handleRegisterPay([user])}
-                title="Registrar pago"
-              >
-                <CreditCardIcon size={18} />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-10 w-10 bg-green-600 text-white hover:bg-green-700 border-green-600 transition-colors"
-                onClick={() => handleCreateTicket([user])}
-                title="Crear reporte"
-              >
-                <FileText size={18} />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-10 w-10 bg-yellow-500 text-white hover:bg-yellow-600 border-yellow-500 transition-colors"
-                onClick={() => handleUpdateCliente([user])}
-                title="Editar cliente"
-              >
-                <PencilIcon size={18} />
-              </Button>
+              {permissions?.canAccessCobranza && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-10 w-10 bg-blue-600 text-white hover:bg-blue-700 border-blue-600 transition-colors"
+                  onClick={() => handleRegisterPay([user])}
+                  title="Registrar pago"
+                >
+                  <CreditCardIcon size={18} />
+                </Button>
+              )}
+              {permissions?.canCreateReport && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-10 w-10 bg-green-600 text-white hover:bg-green-700 border-green-600 transition-colors"
+                  onClick={() => handleCreateTicket([user])}
+                  title="Crear reporte"
+                >
+                  <FileText size={18} />
+                </Button>
+              )}
+              {permissions?.canEditClient && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-10 w-10 bg-yellow-500 text-white hover:bg-yellow-600 border-yellow-500 transition-colors"
+                  onClick={() => handleUpdateCliente([user])}
+                  title="Editar cliente"
+                >
+                  <PencilIcon size={18} />
+                </Button>
+              )}
             </div>
           </div>
         ))}
@@ -199,33 +214,39 @@ export const Table: FC<TableProps> = ({ data, handleUpdateCliente, handleRegiste
               </Badge>
             </div>
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100">
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-10 w-10 bg-blue-600 text-white hover:bg-blue-700 border-blue-600 transition-colors"
-                onClick={() => handleRegisterPay([user])}
-                title="Registrar pago"
-              >
-                <CreditCardIcon size={18} />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-10 w-10 bg-green-600 text-white hover:bg-green-700 border-green-600 transition-colors"
-                onClick={() => handleCreateTicket([user])}
-                title="Crear reporte"
-              >
-                <FileText size={18} />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-10 w-10 bg-yellow-500 text-white hover:bg-yellow-600 border-yellow-500 transition-colors"
-                onClick={() => handleUpdateCliente([user])}
-                title="Editar cliente"
-              >
-                <PencilIcon size={18} />
-              </Button>
+              {permissions?.canAccessCobranza && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-10 w-10 bg-blue-600 text-white hover:bg-blue-700 border-blue-600 transition-colors"
+                  onClick={() => handleRegisterPay([user])}
+                  title="Registrar pago"
+                >
+                  <CreditCardIcon size={18} />
+                </Button>
+              )}
+              {permissions?.canCreateReport && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-10 w-10 bg-green-600 text-white hover:bg-green-700 border-green-600 transition-colors"
+                  onClick={() => handleCreateTicket([user])}
+                  title="Crear reporte"
+                >
+                  <FileText size={18} />
+                </Button>
+              )}
+              {permissions?.canEditClient && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-10 w-10 bg-yellow-500 text-white hover:bg-yellow-600 border-yellow-500 transition-colors"
+                  onClick={() => handleUpdateCliente([user])}
+                  title="Editar cliente"
+                >
+                  <PencilIcon size={18} />
+                </Button>
+              )}
             </div>
           </div>
         ))}

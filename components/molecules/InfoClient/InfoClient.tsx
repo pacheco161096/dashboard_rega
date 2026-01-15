@@ -3,11 +3,14 @@ import { useEffect, useState } from "react";
 import { PersonFillIcon, SignOutIcon } from "@primer/octicons-react";
 import s from "../../../app/global.module.css";
 import { useRouter } from "next/navigation";
+import { ROLES_ARRAY, UserRole, ROLE_NAMES } from "@/lib/roles";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export interface UserLoginInt {
   id: string;
   nombre: string;
   email: string;
+  role?: string;
 }
 
 export default function InfoClient() {
@@ -19,10 +22,27 @@ export default function InfoClient() {
     if (typeof window !== "undefined") {
       const storedUser = sessionStorage.getItem("loginUser");
       if (storedUser) {
-        setUser(JSON.parse(storedUser));
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        // Si no tiene rol, asignar Admin por defecto
+        if (!parsedUser.role) {
+          const updatedUser = { ...parsedUser, role: UserRole.ADMIN };
+          sessionStorage.setItem("loginUser", JSON.stringify(updatedUser));
+          setUser(updatedUser);
+        }
       }
     }
   }, []);
+
+  const handleRoleChange = (newRole: string) => {
+    if (user) {
+      const updatedUser = { ...user, role: newRole };
+      sessionStorage.setItem("loginUser", JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      // Recargar la página para aplicar los cambios de permisos
+      window.location.reload();
+    }
+  };
 
   const logout = () => {
     sessionStorage.removeItem("loginUser"); // Eliminar sesión
@@ -36,6 +56,26 @@ export default function InfoClient() {
           <PersonFillIcon size={20} className="text-gray-600 flex-shrink-0" />
           <span className={s.userName}>{user?.nombre || "Usuario"}</span>
         </div>
+        
+        {/* Selector de rol para pruebas */}
+        <div className="flex items-center gap-2 mr-2">
+          <Select
+            value={user?.role || UserRole.ADMIN}
+            onValueChange={handleRoleChange}
+          >
+            <SelectTrigger className="w-[140px] h-8 text-xs">
+              <SelectValue placeholder="Rol" />
+            </SelectTrigger>
+            <SelectContent>
+              {ROLES_ARRAY.map((rol) => (
+                <SelectItem key={rol.id} value={rol.value}>
+                  {rol.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
         <button 
           className={s.logoutButton}
           onClick={() => setIsModalSession(true)}
