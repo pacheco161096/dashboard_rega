@@ -49,6 +49,7 @@ const initialUserData = {
   ip_address: "",
   tipo_servicio: "",
   id_mikrotik: "",
+  listado_region: "",
 };
 
 const dataInput = [
@@ -220,11 +221,21 @@ export const CustomerForm: FC<CustomerFormProps> = ({
   userData = null,
   userId,
 }) => {
-  const [dataUser, setDataUser] = useState<Record<string, string>>(
-    userData && Array.isArray(userData) && userData.length > 0
-      ? (userData[0] as unknown as Record<string, string>)
-      : initialUserData
-  );
+  const [dataUser, setDataUser] = useState<Record<string, string>>(() => {
+    if (userData && Array.isArray(userData) && userData.length > 0) {
+      // Convertir todos los valores null/undefined a cadenas vacías
+      const userDataRaw = userData[0] as unknown as Record<
+        string,
+        string | null | undefined
+      >;
+      const sanitizedData: Record<string, string> = {};
+      Object.keys(initialUserData).forEach((key) => {
+        sanitizedData[key] = userDataRaw[key] ?? "";
+      });
+      return sanitizedData;
+    }
+    return initialUserData;
+  });
   const [isLoading, setIsLoading] = useState(false);
   // Cargar datos del usuario cuando estamos en modo edición
   useEffect(() => {
@@ -234,7 +245,16 @@ export const CustomerForm: FC<CustomerFormProps> = ({
       Array.isArray(userData) &&
       userData.length > 0
     ) {
-      setDataUser(userData[0] as unknown as Record<string, string>);
+      // Convertir todos los valores null/undefined a cadenas vacías
+      const userDataRaw = userData[0] as unknown as Record<
+        string,
+        string | null | undefined
+      >;
+      const sanitizedData: Record<string, string> = {};
+      Object.keys(initialUserData).forEach((key) => {
+        sanitizedData[key] = userDataRaw[key] ?? "";
+      });
+      setDataUser(sanitizedData);
     } else {
       setDataUser(initialUserData);
     }
@@ -338,20 +358,25 @@ export const CustomerForm: FC<CustomerFormProps> = ({
   const renderFields = (section: string) =>
     dataInput
       .filter((item) => item.section === section)
-      .map((item) => (
-        <div className="space-y-2" key={item.name}>
-          <Label htmlFor={item.name}>{item.placeholder}</Label>
-          <Input
-            id={item.name}
-            name={item.name}
-            placeholder={item.placeholder}
-            type={item.type}
-            value={dataUser[item.name as keyof typeof dataUser] as string}
-            onChange={handleChange}
-            required={item.required}
-          />
-        </div>
-      ));
+      .map((item) => {
+        const fieldValue = dataUser[item.name as keyof typeof dataUser];
+        // Convertir null o undefined a cadena vacía para evitar errores de React
+        const safeValue = fieldValue ?? "";
+        return (
+          <div className="space-y-2" key={item.name}>
+            <Label htmlFor={item.name}>{item.placeholder}</Label>
+            <Input
+              id={item.name}
+              name={item.name}
+              placeholder={item.placeholder}
+              type={item.type}
+              value={safeValue as string}
+              onChange={handleChange}
+              required={item.required}
+            />
+          </div>
+        );
+      });
 
   return (
     <div className={s.container}>
