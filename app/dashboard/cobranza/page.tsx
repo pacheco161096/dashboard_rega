@@ -109,7 +109,7 @@ function Cobranza() {
         console.error("Error parsing selectedUser:", err);
       }
     }
-  }, [isOpenCaja, isDialogOpen]);
+  }, [isOpenCaja]);
 
   const fetchDataUser = useCallback(
     async (userId: string) => {
@@ -224,7 +224,7 @@ function Cobranza() {
     try {
       const paymentData: {
         idCliente: number | undefined;
-        idUsuario: string | undefined;
+        idUsuario: number | undefined;
         carshop: typeof carShop;
         metodo: string;
         referencia?: string;
@@ -232,7 +232,7 @@ function Cobranza() {
         idCliente: user?.id,
         carshop: carShop,
         metodo: paymentMethod,
-        idUsuario: JSON.parse(userLogin as string)?.id?.toString(),
+        idUsuario: JSON.parse(userLogin as string)?.id,
       };
 
       // Solo agregar referencia si el método no es Efectivo
