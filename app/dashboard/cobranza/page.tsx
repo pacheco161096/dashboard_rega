@@ -32,9 +32,21 @@ export interface ItemCarInt {
   fecha: string;
 }
 
+interface GastoForm {
+  date: string;
+  concepto: string;
+  monto: string;
+  metodo: string;
+}
 function Cobranza() {
   const [openVenta, setOpenVenta] = useState(false);
   const [openGasto, setOpenGasto] = useState(false);
+  const [gastosForm, setGastosForm] = useState<GastoForm>({
+    date: "",
+    concepto: "",
+    monto: "",
+    metodo: "",
+  });
   const [tab, setTabNew] = useState(1);
   const [user, setUser] = useState<User | null>(null);
   const [employee, setEmployee] = useState<any | null>(null);
@@ -194,8 +206,39 @@ function Cobranza() {
     setOpenVenta(false);
   }, [carShop.length]);
 
-  const SubmitVenta = (e: { preventDefault: () => void }) => {
+  const HandleSubmitGasto = async (e: { preventDefault: () => void }) => {
     e.preventDefault();
+    setIsLoading(true);
+    const response = await axios.post("https://cms.regatelecom.mx/api/gastos", {
+      data: {
+        idusuario: JSON.parse(userLogin as string)?.id.toString(),
+        fecha: new Date(gastosForm.date).toISOString(),
+        concepto: gastosForm.concepto,
+        monto: gastosForm.monto,
+        metodo: gastosForm.metodo,
+      },
+    });
+    if (response?.data) {
+      toast({
+        title: "Gasto creado correctamente",
+        description: "El gasto se ha creado correctamente.",
+      });
+    } else {
+      toast({
+        title: "Error al crear el gasto",
+        description:
+          "Hubo un problema al crear el gasto. Por favor intenta nuevamente.",
+        variant: "destructive",
+      });
+    }
+    setIsLoading(false);
+    setOpenGasto(false);
+    setGastosForm({
+      date: "",
+      concepto: "",
+      monto: "",
+      metodo: "",
+    });
   };
 
   const totalPrecio = useMemo(() => {
@@ -274,14 +317,24 @@ function Cobranza() {
     }
   }, [paymentMethod, paymentReference, carShop, user?.id, toast]);
 
-  const abrirCaja = () => {
+  const abrirCaja = async () => {
     const now = new Date();
     const nuevaCaja = {
       montoApertura: parseFloat(montoApertura),
       fechaHoraApertura: now.toISOString(),
-      employeeId: employee?.id,
+      employeeId: employee?.id.toString(),
     };
-    sessionStorage.setItem("caja", JSON.stringify(nuevaCaja));
+    try {
+      const resp = await axios.post("https://cms.regatelecom.mx/api/cajas", {
+        data: nuevaCaja,
+      });
+      if (resp?.status && resp?.status == 200) {
+        sessionStorage.setItem("caja", JSON.stringify(resp.data.data));
+      }
+    } catch (err) {
+      console.error("Error al abrir caja:", err);
+    }
+
     setCaja(nuevaCaja);
     setMontoApertura("");
     setIsOpenCaja(true);
@@ -300,7 +353,14 @@ function Cobranza() {
     };
 
     try {
-      const resp = await axios.post("https://cms.regatelecom.mx/api/cajas", {
+      const getGastos = await axios.get(
+        "https://cms.regatelecom.mx/api/gastos"
+      );
+      if (getGastos?.status && getGastos?.status == 200) {
+        cajaCerrada.gastos = getGastos.data.data;
+      }
+
+      const resp = await axios.put("https://cms.regatelecom.mx/api/cajas", {
         data: cajaCerrada,
       });
 
@@ -897,13 +957,17 @@ function Cobranza() {
               </button>
             </div>
           </div>
-          <form onSubmit={(e) => SubmitVenta(e)} className="space-y-4">
+          <form onSubmit={(e) => HandleSubmitGasto(e)} className="space-y-4">
             <div>
               <label className="block mb-2 text-sm font-medium text-gray-700">
                 Fecha del gasto <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
+                value={gastosForm.date}
+                onChange={(e) =>
+                  setGastosForm({ ...gastosForm, date: e.target.value })
+                }
                 required
                 className="w-full h-11 border border-gray-300 rounded-lg px-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               />
@@ -913,6 +977,10 @@ function Cobranza() {
                 Categoría del gasto <span className="text-red-500">*</span>
               </label>
               <select
+                value={gastosForm.concepto}
+                onChange={(e) =>
+                  setGastosForm({ ...gastosForm, concepto: e.target.value })
+                }
                 required
                 className="w-full h-11 border border-gray-300 rounded-lg px-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               >
@@ -937,26 +1005,75 @@ function Cobranza() {
                   min="0"
                   required
                   placeholder="0.00"
+                  value={gastosForm.monto}
+                  onChange={(e) =>
+                    setGastosForm({ ...gastosForm, monto: e.target.value })
+                  }
                   className="w-full h-11 border border-gray-300 rounded-lg pl-8 pr-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-moz-appearance:textfield]"
                 />
               </div>
             </div>
-            <div className="pt-4 space-y-3">
-              <button
-                type="submit"
-                className="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+            <div>
+              <label className="block my-2 text-sm font-medium text-gray-700">
+                Método de pago <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={gastosForm.metodo}
+                onChange={(e) =>
+                  setGastosForm({ ...gastosForm, metodo: e.target.value })
+                }
+                required
+                className="w-full h-11 border border-gray-300 rounded-lg px-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               >
-                <i className="fa-solid fa-plus"></i>
-                Crear Gasto
-              </button>
-              <button
-                type="button"
-                className="w-full py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
-                onClick={() => setOpenGasto(false)}
-              >
-                Cancelar
-              </button>
+                <option value="">Selecciona un método de pago</option>
+                <option value="Efectivo">Efectivo</option>
+                <option value="TarjetaDC">Tarjeta Débito/Crédito</option>
+                <option value="Deposito">Depósito</option>
+                <option value="Transferencia">Transferencia</option>
+              </select>
             </div>
+            {isLoading ? (
+              <div className="flex items-center justify-center gap-2">
+                <svg
+                  className="animate-spin h-5 w-5"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                Procesando...
+              </div>
+            ) : (
+              <div className="pt-4 space-y-3">
+                <button
+                  type="submit"
+                  className="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                >
+                  <i className="fa-solid fa-plus"></i>
+                  Crear Gasto
+                </button>
+                <button
+                  type="button"
+                  className="w-full py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+                  onClick={() => setOpenGasto(false)}
+                >
+                  Cancelar
+                </button>
+              </div>
+            )}
           </form>
         </div>
       </Drawer>
