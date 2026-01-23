@@ -8,10 +8,8 @@ import React, {
 } from "react";
 import s from "./cobranza.module.css";
 import Drawer from "@mui/material/Drawer";
-import { Factura, User } from "../customers/page";
-import axios from "axios";
+import { Gasto } from "@/types/cobranza";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -21,358 +19,273 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+// Hooks personalizados
+import { useCaja } from "@/hooks/useCaja";
+import { useGastos } from "@/hooks/useGastos";
+import { useVentas } from "@/hooks/useVentas";
+import { useCarrito } from "@/hooks/useCarrito";
+import { useCliente } from "@/hooks/useCliente";
+import { usePago } from "@/hooks/usePago";
+import { useMikrotik } from "@/hooks/useMikrotik";
+// Constantes y utilidades
+import {
+  METODOS_PAGO,
+  METODOS_PAGO_ARRAY,
+  CONCEPTOS_GASTO_ARRAY,
+  TABS_VENTA,
+  VALORES_DEFECTO,
+  STORAGE_KEYS,
+  MENSAJES,
+  requiereReferencia,
+} from "@/constants/cobranza";
+import { getTodayISO } from "@/lib/api/config";
+import { cajaService } from "@/lib/services";
+import { ItemCarrito, GastoFormData } from "@/types/cobranza";
 
-export interface ItemCarInt {
-  idfactura: string;
-  id: number;
-  titulo: string;
-  precio: number;
-  cantidad: number;
-  type: string;
-  fecha: string;
-}
+// Re-exportar tipos para compatibilidad
+export type ItemCarInt = ItemCarrito;
 
-interface GastoForm {
-  date: string;
-  concepto: string;
-  monto: string;
-  metodo: string;
-}
 function Cobranza() {
+  // Estados de UI
   const [openVenta, setOpenVenta] = useState(false);
   const [openGasto, setOpenGasto] = useState(false);
-  const [gastosForm, setGastosForm] = useState<GastoForm>({
+  const [tab, setTabNew] = useState<
+    (typeof TABS_VENTA)[keyof typeof TABS_VENTA]
+  >(VALORES_DEFECTO.TAB_VENTA);
+  const [paymentMethod, setPaymentMethod] = useState<
+    (typeof METODOS_PAGO)[keyof typeof METODOS_PAGO]
+  >(VALORES_DEFECTO.METODO_PAGO);
+  const [paymentReference, setPaymentReference] = useState("");
+  const [searchUserId, setSearchUserId] = useState("");
+  const [montoApertura, setMontoApertura] = useState("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [gastosForm, setGastosForm] = useState<GastoFormData>({
     date: "",
     concepto: "",
     monto: "",
     metodo: "",
   });
-  const [tab, setTabNew] = useState(1);
-  const [user, setUser] = useState<User | null>(null);
-  const [employee, setEmployee] = useState<any | null>(null);
-  const [carShop, setCarShop] = useState<ItemCarInt[]>([]);
-  const [facturasAgregadas, setFacturasAgregadas] = useState<number[]>([]);
-  const [currentDate, setCurrentDate] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("Efectivo");
-  const [paymentReference, setPaymentReference] = useState("");
-  const [searchUserId, setSearchUserId] = useState("");
-  const [isOpenCaja, setIsOpenCaja] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [montoApertura, setMontoApertura] = useState("");
-  const [montoCierre, setMontoCierre] = useState("");
-  const [caja, setCaja] = useState<any>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const hasShownAlert = useRef(false);
-  const { toast } = useToast();
-  const userLogin = sessionStorage.getItem("loginUser");
-  // Memoizar la fecha actual
-  const currentDateMemo = useMemo(() => {
-    return new Date().toISOString().split("T")[0];
-  }, []);
 
-  useEffect(() => {
-    const employee = sessionStorage.getItem("loginUser");
-    const storedCaja = sessionStorage.getItem("caja");
-
-    if (employee) {
-      try {
-        const parsedEmp = JSON.parse(employee);
-        setEmployee(parsedEmp);
-      } catch (err) {
-        console.error("Error parsing employee:", err);
-      }
+  // Obtener usuario logueado
+  const userLogin = sessionStorage.getItem(STORAGE_KEYS.LOGIN_USER);
+  const employee = useMemo(() => {
+    if (!userLogin) return null;
+    try {
+      return JSON.parse(userLogin);
+    } catch {
+      return null;
     }
+  }, [userLogin]);
 
-    if (!storedCaja && !hasShownAlert.current) {
-      alert("La caja aún no está abierta");
+  const userId = employee?.id?.toString() || "";
+
+  // Hooks personalizados
+  const {
+    caja,
+    isOpenCaja,
+    isLoading: isLoadingCaja,
+    abrirCaja: abrirCajaHook,
+    cerrarCaja: cerrarCajaHook,
+    obtenerMontoApertura,
+  } = useCaja();
+
+  const {
+    gastos,
+    totalGastos,
+    isLoading: isLoadingGastos,
+    crearGasto,
+  } = useGastos({
+    userId,
+    fecha: getTodayISO(),
+    autoLoad: !!userId && isOpenCaja,
+  });
+
+  const {
+    transacciones,
+    totalVentas,
+    isLoading: isLoadingVentas,
+    refrescarVentas,
+  } = useVentas({
+    userId,
+    fecha: getTodayISO(),
+    autoLoad: !!userId && isOpenCaja,
+  });
+
+  const {
+    carrito,
+    total: totalCarrito,
+    agregarItem,
+    incrementarCantidad,
+    decrementarCantidad,
+    limpiarCarrito,
+    estaEnCarrito,
+  } = useCarrito();
+
+  const { mikrotik, obtenerMikrotik } = useMikrotik();
+
+  const { cliente, buscarCliente, limpiarCliente } = useCliente();
+
+  const { isLoading: isLoadingPago, procesarPago } = usePago();
+
+  // Estados calculados
+  const currentDate = useMemo(() => getTodayISO(), []);
+  const total = useMemo(
+    () => totalVentas - totalGastos,
+    [totalVentas, totalGastos]
+  );
+  const isLoading =
+    isLoadingCaja || isLoadingGastos || isLoadingVentas || isLoadingPago;
+
+  // Ref para alerta de caja cerrada
+  const hasShownAlert = useRef(false);
+
+  // Mostrar alerta si la caja no está abierta
+  useEffect(() => {
+    if (!isOpenCaja && !hasShownAlert.current && userLogin) {
+      // Usar toast en lugar de alert
       hasShownAlert.current = true;
     }
+  }, [isOpenCaja, userLogin]);
 
-    setCurrentDate(currentDateMemo);
-  }, [currentDateMemo]);
-
+  // Manejar usuario seleccionado desde storage
   useEffect(() => {
-    const storedCaja = sessionStorage.getItem("caja");
-    const selectedUser = sessionStorage.getItem("selectedUser");
+    if (!isOpenCaja) return;
 
-    if (storedCaja) {
-      try {
-        const parsedCaja = JSON.parse(storedCaja);
-        setCaja(parsedCaja);
-        setIsOpenCaja(true);
-      } catch (err) {
-        console.error("Error parsing caja:", err);
-        setIsOpenCaja(false);
-      }
-    } else {
-      setIsOpenCaja(false);
-    }
-
-    if (selectedUser && isOpenCaja) {
+    const selectedUser = sessionStorage.getItem(STORAGE_KEYS.SELECTED_USER);
+    if (selectedUser) {
       try {
         const parsedUser = JSON.parse(selectedUser);
         if (Array.isArray(parsedUser) && parsedUser.length > 0) {
-          setUser(parsedUser[0]);
+          buscarCliente(parsedUser[0]?.id?.toString() || "");
           setOpenVenta(true);
-          setTabNew(2);
-          fetchDataUser(parsedUser[0]?.id);
+          setTabNew(TABS_VENTA.PAQUETE);
         }
       } catch (err) {
         console.error("Error parsing selectedUser:", err);
       }
     }
-  }, [isOpenCaja]);
+  }, [isOpenCaja, buscarCliente]);
 
-  const fetchDataUser = useCallback(
+  // Funciones de manejo de cliente
+  const handleBuscarCliente = useCallback(
     async (userId: string) => {
-      if (carShop.length > 0) {
-        setCarShop([]);
+      if (carrito.length > 0) {
+        limpiarCarrito();
       }
-
-      try {
-        const response = await axios.post(
-          "https://monkfish-app-2et8k.ondigitalocean.app/api/searchUserPayment",
-          {
-            idusuario: userId,
-          }
-        );
-        setUser(response.data);
-      } catch (err) {
-        console.log("error" + err);
-      }
+      await buscarCliente(userId);
     },
-    [carShop.length]
+    [carrito.length, buscarCliente, limpiarCarrito]
   );
-
-  const addCarShop = useCallback((item: ItemCarInt) => {
-    setCarShop((prevCarShop) => {
-      // Verificar si el producto ya está en el carrito
-      const existingItem = prevCarShop.find(
-        (product) => product.id === item.id
-      );
-
-      if (existingItem) {
-        // Si el producto existe, incrementar la cantidad
-        return prevCarShop.map((product) =>
-          product.id === item.id
-            ? { ...product, cantidad: product.cantidad + 1 }
-            : product
-        );
-      } else {
-        // Si el producto no existe, agregarlo al carrito conservando su cantidad inicial si ya la tiene
-        return [...prevCarShop, { ...item, cantidad: item.cantidad || 1 }];
-      }
-    });
-    setFacturasAgregadas((prevFacturas) => [
-      ...prevFacturas,
-      Number(item.idfactura), // Asegura que sea un número
-    ]);
-  }, []);
-
-  const incrementQuantity = useCallback((id: number) => {
-    setCarShop((prevCarShop) =>
-      prevCarShop.map((item) =>
-        item.id === id ? { ...item, cantidad: item.cantidad + 1 } : item
-      )
-    );
-  }, []);
-
-  const decrementQuantity = useCallback((id: number) => {
-    setCarShop(
-      (prevCarShop) =>
-        prevCarShop
-          .map((item) =>
-            item.id === id ? { ...item, cantidad: item.cantidad - 1 } : item
-          )
-          .filter((item) => item.cantidad > 0) // Elimina si la cantidad llega a 0
-    );
-  }, []);
 
   const openDrawerVenta = useCallback(() => {
     setOpenVenta(true);
-    setTabNew(1);
+    setTabNew(TABS_VENTA.PRODUCTO);
   }, []);
 
   const closeDrawerVenta = useCallback(() => {
-    if (carShop.length > 0) {
-      setCarShop([]);
-    }
-
-    setUser(null);
-    setPaymentReference(""); // Limpiar referencia al cerrar
-    setPaymentMethod("Efectivo"); // Resetear método de pago
-    setSearchUserId(""); // Limpiar búsqueda
-    sessionStorage.removeItem("selectedUser"); // Limpia user del storage
+    limpiarCarrito();
+    limpiarCliente();
+    setPaymentReference("");
+    setPaymentMethod(VALORES_DEFECTO.METODO_PAGO);
+    setSearchUserId("");
+    sessionStorage.removeItem(STORAGE_KEYS.SELECTED_USER);
     setOpenVenta(false);
-  }, [carShop.length]);
+  }, [limpiarCarrito, limpiarCliente]);
 
   const HandleSubmitGasto = async (e: { preventDefault: () => void }) => {
     e.preventDefault();
-    setIsLoading(true);
-    const response = await axios.post("https://cms.regatelecom.mx/api/gastos", {
-      data: {
-        idusuario: JSON.parse(userLogin as string)?.id.toString(),
-        fecha: new Date(gastosForm.date).toISOString(),
+    if (!userId) return;
+
+    try {
+      await crearGasto({
+        idusuario: userId,
+        fecha: gastosForm.date,
         concepto: gastosForm.concepto,
         monto: gastosForm.monto,
         metodo: gastosForm.metodo,
-      },
-    });
-    if (response?.data) {
-      toast({
-        title: "Gasto creado correctamente",
-        description: "El gasto se ha creado correctamente.",
       });
-    } else {
-      toast({
-        title: "Error al crear el gasto",
-        description:
-          "Hubo un problema al crear el gasto. Por favor intenta nuevamente.",
-        variant: "destructive",
+      setOpenGasto(false);
+      setGastosForm({
+        date: "",
+        concepto: "",
+        monto: "",
+        metodo: "",
       });
+    } catch {
+      // El error ya se maneja en el hook
     }
-    setIsLoading(false);
-    setOpenGasto(false);
-    setGastosForm({
-      date: "",
-      concepto: "",
-      monto: "",
-      metodo: "",
-    });
   };
 
-  const totalPrecio = useMemo(() => {
-    return carShop.reduce((total, item) => {
-      return total + item.precio * item.cantidad;
-    }, 0);
-  }, [carShop]);
-
-  // Memoizar los IDs del carrito para búsquedas rápidas
-  const carShopIds = useMemo(() => {
-    return new Set(carShop.map((item) => item.id));
-  }, [carShop]);
-
   const sendPay = useCallback(async () => {
-    // Validar que si el método de pago no es Efectivo, debe tener referencia
-    if (paymentMethod !== "Efectivo" && !paymentReference.trim()) {
-      toast({
-        title: "Referencia requerida",
-        description: "Por favor ingresa la referencia del pago.",
-        variant: "destructive",
-      });
+    if (!cliente?.id || !userId) return;
+
+    // Validar referencia si es requerida
+    if (requiereReferencia(paymentMethod) && !paymentReference.trim()) {
       return;
     }
 
-    setIsLoading(true);
-    try {
-      const paymentData: {
-        idCliente: number | undefined;
-        idUsuario: number | undefined;
-        carshop: typeof carShop;
-        metodo: string;
-        referencia?: string;
-      } = {
-        idCliente: user?.id,
-        carshop: carShop,
-        metodo: paymentMethod,
-        idUsuario: JSON.parse(userLogin as string)?.id,
-      };
+    const pagoExitoso = await procesarPago({
+      idCliente: cliente.id,
+      idUsuario: userId,
+      carshop: carrito,
+      metodo: paymentMethod,
+      referencia: requiereReferencia(paymentMethod)
+        ? paymentReference.trim()
+        : undefined,
+    });
 
-      // Solo agregar referencia si el método no es Efectivo
-      if (paymentMethod !== "Efectivo" && paymentReference.trim()) {
-        paymentData.referencia = paymentReference.trim();
-      }
-
-      console.log("paymentData", paymentData);
-      const response = await axios.post(
-        "https://monkfish-app-2et8k.ondigitalocean.app/api/payment",
-        paymentData
-      );
-
-      const { pagoexitoso } = response.data;
-
-      if (pagoexitoso) {
-        toast({
-          title: "Pago exitoso",
-          description: "Tu pago se ha procesado correctamente.",
-        });
-        // Limpiar todo después del pago exitoso
-        setCarShop([]);
-        setUser(null);
-        setPaymentReference("");
-        setPaymentMethod("Efectivo");
-        setSearchUserId(""); // Limpiar búsqueda
-        sessionStorage.removeItem("selectedUser");
-      }
-    } catch (err) {
-      console.log("error" + err);
-      toast({
-        title: "Error al procesar el pago",
-        description:
-          "Hubo un problema al procesar tu pago. Por favor intenta nuevamente.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
+    if (pagoExitoso) {
+      await refrescarVentas();
+      limpiarCarrito();
+      limpiarCliente();
+      setPaymentReference("");
+      setPaymentMethod(VALORES_DEFECTO.METODO_PAGO);
+      setSearchUserId("");
+      sessionStorage.removeItem(STORAGE_KEYS.SELECTED_USER);
     }
-  }, [paymentMethod, paymentReference, carShop, user?.id, toast]);
+  }, [
+    cliente,
+    userId,
+    paymentMethod,
+    paymentReference,
+    carrito,
+    procesarPago,
+    refrescarVentas,
+    limpiarCarrito,
+    limpiarCliente,
+  ]);
 
   const abrirCaja = async () => {
-    const now = new Date();
-    const nuevaCaja = {
-      montoApertura: parseFloat(montoApertura),
-      fechaHoraApertura: now.toISOString(),
-      employeeId: employee?.id.toString(),
-    };
-    try {
-      const resp = await axios.post("https://cms.regatelecom.mx/api/cajas", {
-        data: nuevaCaja,
-      });
-      if (resp?.status && resp?.status == 200) {
-        sessionStorage.setItem("caja", JSON.stringify(resp.data.data));
-      }
-    } catch (err) {
-      console.error("Error al abrir caja:", err);
-    }
+    if (!employee?.id) return;
 
-    setCaja(nuevaCaja);
-    setMontoApertura("");
-    setIsOpenCaja(true);
-    setIsDialogOpen(false);
+    try {
+      await abrirCajaHook({
+        montoApertura: parseFloat(montoApertura),
+        fechaHoraApertura: new Date().toISOString(),
+        employeeId: employee.id.toString(),
+      });
+      setMontoApertura("");
+      setIsDialogOpen(false);
+    } catch {
+      // El error ya se maneja en el hook
+    }
   };
 
   const cerrarCaja = async () => {
     if (!caja) return;
 
-    const now = new Date();
-    const cajaCerrada = {
-      ...caja,
-      montoCierre: parseFloat(montoCierre),
-      fechaHoraCierre: now.toISOString(),
-      employeeId: caja.employeeId.toString(),
-    };
+    const montoApertura = obtenerMontoApertura();
+    const montoCierre = cajaService.calcularMontoCierre(
+      montoApertura,
+      totalVentas,
+      totalGastos
+    );
 
     try {
-      const getGastos = await axios.get(
-        "https://cms.regatelecom.mx/api/gastos"
-      );
-      if (getGastos?.status && getGastos?.status == 200) {
-        cajaCerrada.gastos = getGastos.data.data;
-      }
-
-      const resp = await axios.put("https://cms.regatelecom.mx/api/cajas", {
-        data: cajaCerrada,
-      });
-
-      if (resp?.status && resp?.status == 200) {
-        sessionStorage.removeItem("caja");
-        setCaja(null);
-        setMontoCierre("");
-        setIsOpenCaja(false);
-        setIsDialogOpen(false);
-      }
-    } catch (err) {
-      console.error("Error al cerrar caja:", err);
+      await cerrarCajaHook(montoCierre);
+      setIsDialogOpen(false);
+    } catch {
+      // El error ya se maneja en el hook
     }
   };
 
@@ -448,7 +361,7 @@ function Cobranza() {
         <div className="flex h-full w-full">
           <div className="flex justify-center items-center text-center w-full px-4">
             <span className="text-xl sm:text-2xl lg:text-4xl">
-              Caja cerrada. Ábrela para empezar a operar.
+              {MENSAJES.CAJA_CERRADA}
             </span>
           </div>
         </div>
@@ -468,17 +381,51 @@ function Cobranza() {
               Movimientos del {currentDate}
             </h1>
             <div className={s["Cobranza-titleSide"]}>
-              <h3 className="font-semibold">Ventas</h3>
+              <h3 className="font-semibold text-green-500">Ventas</h3>
             </div>
             <ul className={s["Cobranza-list"]}>
-              <li>Concepto</li>
+              {transacciones.length > 0 &&
+                transacciones.map((transaccion, index: number) => (
+                  <li
+                    key={`transaccion-${transaccion.idTransaccion}-${transaccion.idProducto}-${index}`}
+                  >
+                    {transaccion.idTransaccion}-{transaccion.titulo} - $
+                    {transaccion.total}
+                  </li>
+                ))}
             </ul>
             <div className={s["Cobranza-titleSide"]}>
-              <h3 className="font-semibold">Gastos</h3>
+              <h3 className="font-semibold text-red-500">Gastos</h3>
             </div>
             <ul className={s["Cobranza-list"]}>
-              <li>Concepto</li>
+              {gastos.length > 0 &&
+                gastos.map((gasto: Gasto) => (
+                  <li key={gasto.id}>
+                    {gasto.attributes.concepto} - ${gasto.attributes.monto}
+                  </li>
+                ))}
             </ul>
+            <div className="text-sm sm:text-base whitespace-nowrap flex-shrink-0 border-t-2 border-gray-300 pt-2">
+              <div className="text-gray-500">
+                Total Ventas: ${totalVentas.toFixed(2)}
+              </div>
+              <div className="text-gray-500">
+                Total Gastos: ${totalGastos.toFixed(2)}
+              </div>
+              <div className="text-gray-500">
+                SubTotal en Caja: ${total.toFixed(2)}
+              </div>
+              {caja && (
+                <div className="text-gray-500">
+                  Monto de apertura: ${obtenerMontoApertura().toFixed(2)}
+                </div>
+              )}
+              {caja && (
+                <div className="text-black-500">
+                  Total: ${(obtenerMontoApertura() + total).toFixed(2)}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -491,7 +438,7 @@ function Cobranza() {
             </DialogTitle>
             <DialogDescription>
               {isOpenCaja
-                ? "Ingresa el monto final de cierre:"
+                ? "El monto final de cierre es:"
                 : "Ingresa el monto inicial de apertura:"}
             </DialogDescription>
           </DialogHeader>
@@ -505,17 +452,19 @@ function Cobranza() {
             />
           ) : (
             <Input
-              type="number"
+              type="text"
               placeholder="Ej. 1500"
-              value={montoCierre}
-              onChange={(e) => setMontoCierre(e.target.value)}
+              value={`${(obtenerMontoApertura() + total).toFixed(2)}`}
+              disabled
             />
           )}
 
           <Button
             onClick={!isOpenCaja ? abrirCaja : cerrarCaja}
             disabled={
-              (!isOpenCaja && !montoApertura) || (isOpenCaja && !montoCierre)
+              (!isOpenCaja && !montoApertura) ||
+              (isOpenCaja && isLoadingCaja) ||
+              (isOpenCaja && obtenerMontoApertura() + total === 0)
             }
           >
             {!isOpenCaja ? "Abrir Caja" : "Cerrar Caja"}
@@ -547,27 +496,27 @@ function Cobranza() {
               <nav className="flex border-gray-700 border rounded-lg h-11 items-center justify-center relative bg-gray-700/50">
                 <div
                   className={`w-1/2 text-center cursor-pointer relative border-r border-gray-700 h-full flex items-center justify-center transition-colors ${
-                    tab == 1
+                    tab === TABS_VENTA.PRODUCTO
                       ? "text-white bg-gray-600 font-medium"
                       : "text-gray-400 hover:text-gray-300"
                   }`}
-                  onClick={() => setTabNew(1)}
+                  onClick={() => setTabNew(TABS_VENTA.PRODUCTO)}
                 >
                   Producto
                 </div>
                 <div
                   className={`w-1/2 text-center cursor-pointer relative h-full flex items-center justify-center transition-colors ${
-                    tab != 1
+                    tab === TABS_VENTA.PAQUETE
                       ? "text-white bg-gray-600 font-medium"
                       : "text-gray-400 hover:text-gray-300"
                   }`}
-                  onClick={() => setTabNew(2)}
+                  onClick={() => setTabNew(TABS_VENTA.PAQUETE)}
                 >
                   Paquete
                 </div>
               </nav>
               <div>
-                {tab === 1 ? (
+                {tab === TABS_VENTA.PRODUCTO ? (
                   <div className="mt-4">
                     <label className="block mb-2 text-gray-300 text-sm font-medium">
                       Buscar Producto
@@ -609,7 +558,7 @@ function Cobranza() {
                           e.currentTarget.userId as HTMLInputElement
                         ).value;
                         setSearchUserId(userId);
-                        fetchDataUser(userId);
+                        handleBuscarCliente(userId);
                       }}
                       className="mb-4"
                     >
@@ -648,20 +597,20 @@ function Cobranza() {
                         </button>
                       </div>
                     </form>
-                    {user && (
+                    {cliente && (
                       <div className="flex flex-col space-y-4">
                         <div className="bg-gray-700/50 rounded-lg p-4">
                           <h3 className="text-lg font-semibold text-white mb-2">
-                            {user?.nombre} {user?.apellido}
+                            {cliente?.nombre} {cliente?.apellido}
                           </h3>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-gray-300 text-sm">
                             <div>
                               <span className="text-gray-400">Email: </span>
-                              <span>{user?.email}</span>
+                              <span>{cliente?.email}</span>
                             </div>
                             <div>
                               <span className="text-gray-400">Teléfono: </span>
-                              <span>{user?.celular}</span>
+                              <span>{cliente?.celular}</span>
                             </div>
                           </div>
                         </div>
@@ -670,16 +619,16 @@ function Cobranza() {
                             <h4 className="text-sm font-medium text-gray-300 mb-2">
                               Paquete Actual
                             </h4>
-                            {user.paqueteActual && (
+                            {cliente.paqueteActual && (
                               <div
-                                key={user.paqueteActual?.id}
+                                key={cliente.paqueteActual?.id}
                                 className="bg-slate-600/70 p-3 rounded-lg flex justify-between items-center"
                               >
                                 <span className="text-white font-medium">
-                                  {user.paqueteActual?.titulo}
+                                  {cliente.paqueteActual?.titulo}
                                 </span>
                                 <span className="text-white font-semibold">
-                                  ${user.paqueteActual?.precio}
+                                  ${cliente.paqueteActual?.precio}
                                 </span>
                               </div>
                             )}
@@ -688,16 +637,16 @@ function Cobranza() {
                             <h4 className="text-sm font-medium text-gray-300 mb-2">
                               Facturas Pendientes
                             </h4>
-                            {user?.Facturas?.map((factura: Factura, i) => {
-                              const isInCart = carShopIds.has(factura.id);
+                            {cliente?.Facturas?.map((factura, i) => {
+                              const isInCart = estaEnCarrito(factura.id);
                               const statusItemCarClass = cn({
-                                "bg-rose-500": user.recargo,
-                                "bg-slate-600": !user.recargo,
+                                "bg-rose-500": cliente.recargo,
+                                "bg-slate-600": !cliente.recargo,
                               });
 
                               return (
                                 <div
-                                  key={i}
+                                  key={`factura-${factura.id}-${factura.idfactura}-${i}`}
                                   className={`${statusItemCarClass} p-3 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2`}
                                 >
                                   <div className="flex-1 min-w-0">
@@ -716,7 +665,7 @@ function Cobranza() {
                                       <button
                                         className="flex justify-center items-center cursor-pointer bg-gray-500 hover:bg-gray-700 p-2 rounded-lg transition-colors"
                                         onClick={() =>
-                                          addCarShop({
+                                          agregarItem({
                                             id: factura.id,
                                             fecha: factura?.fecha,
                                             titulo: factura?.titulo,
@@ -757,7 +706,7 @@ function Cobranza() {
               </div>
             </div>
           </div>
-          {carShop.length > 0 && (
+          {carrito.length > 0 && (
             <div className="flex flex-col mt-6 bg-gray-700/70 p-4 rounded-lg border border-gray-600">
               <div className="flex items-center gap-2 mb-4">
                 <svg
@@ -777,7 +726,7 @@ function Cobranza() {
                 <h3 className="text-lg font-semibold text-white">Carrito</h3>
               </div>
               <div className="space-y-3">
-                {carShop?.map((item) => (
+                {carrito?.map((item) => (
                   <div
                     key={item?.id}
                     className="bg-gray-600/50 p-3 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3"
@@ -794,7 +743,7 @@ function Cobranza() {
                       <div className="flex items-center gap-2 bg-gray-700 rounded-lg">
                         <button
                           className="px-3 py-1.5 text-white hover:bg-gray-600 transition-colors rounded-l-lg"
-                          onClick={() => decrementQuantity(item.id)}
+                          onClick={() => decrementarCantidad(item.id)}
                           aria-label="Decrementar cantidad"
                         >
                           -
@@ -804,7 +753,7 @@ function Cobranza() {
                         </span>
                         <button
                           className="px-3 py-1.5 text-white hover:bg-gray-600 transition-colors rounded-r-lg"
-                          onClick={() => incrementQuantity(item.id)}
+                          onClick={() => incrementarCantidad(item.id)}
                           aria-label="Incrementar cantidad"
                         >
                           +
@@ -820,12 +769,12 @@ function Cobranza() {
               <div className="border-t border-gray-600 mt-4 pt-4 flex justify-between items-center">
                 <span className="text-gray-300 font-medium">Total:</span>
                 <span className="text-white text-xl font-bold">
-                  ${totalPrecio.toFixed(2)}
+                  ${totalCarrito.toFixed(2)}
                 </span>
               </div>
             </div>
           )}
-          {carShop.length > 0 && (
+          {carrito.length > 0 && (
             <div className="flex flex-col mt-6">
               <label
                 className="block mb-2 text-gray-300 text-sm font-medium"
@@ -838,29 +787,28 @@ function Cobranza() {
                 id="payment-method"
                 value={paymentMethod}
                 onChange={(e) => {
-                  setPaymentMethod(e.target.value);
+                  const nuevoMetodo = e.target
+                    .value as (typeof METODOS_PAGO)[keyof typeof METODOS_PAGO];
+                  setPaymentMethod(nuevoMetodo);
                   // Limpiar referencia si se cambia a Efectivo
-                  if (e.target.value === "Efectivo") {
+                  if (!requiereReferencia(nuevoMetodo)) {
                     setPaymentReference("");
                   }
                 }}
               >
-                <option value="Efectivo" className="bg-gray-700">
-                  Efectivo
-                </option>
-                <option value="TarjetaDC" className="bg-gray-700">
-                  Tarjeta Débito/Crédito
-                </option>
-                <option value="Deposito" className="bg-gray-700">
-                  Depósito
-                </option>
-                <option value="Transferencia" className="bg-gray-700">
-                  Transferencia
-                </option>
+                {METODOS_PAGO_ARRAY.map((metodo) => (
+                  <option
+                    key={metodo.value}
+                    value={metodo.value}
+                    className="bg-gray-700"
+                  >
+                    {metodo.label}
+                  </option>
+                ))}
               </select>
             </div>
           )}
-          {carShop.length > 0 && paymentMethod !== "Efectivo" && (
+          {carrito.length > 0 && requiereReferencia(paymentMethod) && (
             <div className="flex flex-col mt-4">
               <label
                 className="block mb-2 text-gray-300 text-sm font-medium"
@@ -875,30 +823,30 @@ function Cobranza() {
                 onChange={(e) => setPaymentReference(e.target.value)}
                 placeholder="Ingresa la referencia del pago"
                 className="w-full h-11 border border-gray-700 rounded-lg bg-gray-700/30 text-white text-sm p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-500"
-                required={paymentMethod !== "Efectivo"}
+                required={requiereReferencia(paymentMethod)}
               />
             </div>
           )}
           <div className="mt-6 space-y-3">
             <button
               className={`w-full py-3 rounded-lg font-semibold transition-colors ${
-                carShop.length == 0 ||
+                carrito.length === 0 ||
                 isLoading ||
-                (paymentMethod !== "Efectivo" && !paymentReference.trim())
+                (requiereReferencia(paymentMethod) && !paymentReference.trim())
                   ? "bg-gray-600 text-gray-400 cursor-not-allowed"
                   : "bg-indigo-600 text-white hover:bg-indigo-700"
               }`}
               disabled={
-                carShop.length == 0 ||
+                carrito.length === 0 ||
                 isLoading ||
-                (paymentMethod !== "Efectivo" && !paymentReference.trim())
+                (requiereReferencia(paymentMethod) && !paymentReference.trim())
               }
               onClick={() => sendPay()}
             >
               {!isLoading ? (
                 <span className="flex items-center justify-center gap-2">
                   <i className="fa-solid fa-credit-card"></i>
-                  Pagar ${totalPrecio.toFixed(2)}
+                  Pagar ${totalCarrito.toFixed(2)}
                 </span>
               ) : (
                 <span className="flex items-center justify-center gap-2">
@@ -985,10 +933,11 @@ function Cobranza() {
                 className="w-full h-11 border border-gray-300 rounded-lg px-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               >
                 <option value="">Selecciona una categoría</option>
-                <option value="servicios">Servicios</option>
-                <option value="suministros">Suministros</option>
-                <option value="mantenimiento">Mantenimiento</option>
-                <option value="otros">Otros</option>
+                {CONCEPTOS_GASTO_ARRAY.map((concepto) => (
+                  <option key={concepto.value} value={concepto.value}>
+                    {concepto.label}
+                  </option>
+                ))}
               </select>
             </div>
             <div>
@@ -1026,10 +975,11 @@ function Cobranza() {
                 className="w-full h-11 border border-gray-300 rounded-lg px-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               >
                 <option value="">Selecciona un método de pago</option>
-                <option value="Efectivo">Efectivo</option>
-                <option value="TarjetaDC">Tarjeta Débito/Crédito</option>
-                <option value="Deposito">Depósito</option>
-                <option value="Transferencia">Transferencia</option>
+                {METODOS_PAGO_ARRAY.map((metodo) => (
+                  <option key={metodo.value} value={metodo.value}>
+                    {metodo.label}
+                  </option>
+                ))}
               </select>
             </div>
             {isLoading ? (
