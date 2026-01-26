@@ -26,7 +26,6 @@ import { useVentas } from "@/hooks/useVentas";
 import { useCarrito } from "@/hooks/useCarrito";
 import { useCliente } from "@/hooks/useCliente";
 import { usePago } from "@/hooks/usePago";
-import { useMikrotik } from "@/hooks/useMikrotik";
 // Constantes y utilidades
 import {
   METODOS_PAGO,
@@ -120,8 +119,6 @@ function Cobranza() {
     limpiarCarrito,
     estaEnCarrito,
   } = useCarrito();
-
-  const { mikrotik, obtenerMikrotik } = useMikrotik();
 
   const { cliente, buscarCliente, limpiarCliente } = useCliente();
 
