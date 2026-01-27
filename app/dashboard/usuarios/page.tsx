@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { PencilIcon, TrashIcon } from "@primer/octicons-react"
+import { UsuariosService } from "@/lib/services/usuariosService"
+import { UsuarioRequest, UsuarioData } from "@/types/usuario"
 import { useToast } from "@/hooks/use-toast"
 import { ROLES_ARRAY } from "@/lib/roles"
 
@@ -51,14 +53,13 @@ export default function Usuarios() {
       setLoading(true)
       const response = await axios.get(`${API_BASE_URL}/usuarios?populate=role`)
       if (response.data?.data) {
-        const usuariosData = response.data.data.map((item: { id: number; attributes: { nombre?: string; usuario?: string; email?: string; role?: { data?: { id: number; attributes: { name?: string } } } } }) => ({
+        const usuariosData = response.data.data.map((item: { id: number; attributes: { nombre?: string; usuario?: string; email?: string; rol?: { data?: { id: number; attributes: { name?: string } } } } }) => ({
           id: item.id,
           nombre: item.attributes.nombre || "",
           username: item.attributes.usuario || "",
           email: item.attributes.email || "",
-          role: item.attributes.role?.data ? {
-            id: item.attributes.role.data.id,
-            name: item.attributes.role.data.attributes.name || ""
+          role: item.attributes.rol ? {
+            name: item.attributes.rol|| ""
           } : { id: 0, name: "" }
         }))
         setUsuarios(usuariosData)
@@ -158,7 +159,7 @@ export default function Usuarios() {
           usuario: formData.username,
           email: formData.email,
           contrasena: formData.password,
-          role: formData.role,
+          rol: ROLES.find((rol) => rol.id.toString() === formData.role)?.name,
         }
       }
 
@@ -189,13 +190,8 @@ export default function Usuarios() {
     if (!selectedUsuario) return
 
     try {
-      const payloadData: {
-        nombre: string
-        usuario: string
-        email: string
-        contrasena?: string
-        role?: string
-      } = {
+      // Construir el payload con los datos básicos
+      const payloadData: UsuarioData = {
         nombre: formData.nombre,
         usuario: formData.username,
         email: formData.email,
@@ -208,14 +204,14 @@ export default function Usuarios() {
 
       // Incluir role si se seleccionó
       if (formData.role) {
-        payloadData.role = formData.role
+        payloadData.rol = ROLES.find((rol) => rol.id.toString() === formData.role)?.name
       }
 
-      const payload = {
+      const payload: UsuarioRequest = {
         data: payloadData
       }
 
-      await axios.put(`${API_BASE_URL}/usuarios/${selectedUsuario.id}`, payload)
+      await UsuariosService.actualizarUsuario(selectedUsuario.id, payload)
       
       toast({
         title: "Éxito",
@@ -270,6 +266,7 @@ export default function Usuarios() {
   const handleSearch = (query: string) => {
     setSearchQuery(query)
   }
+
 
   // Componente del formulario - Las funciones están memorizadas para evitar pérdida de foco
   const renderForm = () => (
