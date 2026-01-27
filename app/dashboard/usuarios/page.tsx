@@ -53,15 +53,21 @@ export default function Usuarios() {
       setLoading(true)
       const response = await axios.get(`${API_BASE_URL}/usuarios?populate=role`)
       if (response.data?.data) {
-        const usuariosData = response.data.data.map((item: { id: number; attributes: { nombre?: string; usuario?: string; email?: string; rol?: { data?: { id: number; attributes: { name?: string } } } } }) => ({
-          id: item.id,
-          nombre: item.attributes.nombre || "",
-          username: item.attributes.usuario || "",
-          email: item.attributes.email || "",
-          role: item.attributes.rol ? {
-            name: item.attributes.rol|| ""
-          } : { id: 0, name: "" }
-        }))
+        const usuariosData = response.data.data.map((item: { id: number; attributes: { nombre?: string; usuario?: string; email?: string; rol?: string } }) => {
+          // Buscar el rol en ROLES_ARRAY basándose en el nombre del rol
+          const rolEncontrado = ROLES.find(r => r.name === item.attributes.rol)
+          
+          return {
+            id: item.id,
+            nombre: item.attributes.nombre || "",
+            username: item.attributes.usuario || "",
+            email: item.attributes.email || "",
+            role: {
+              id: rolEncontrado?.id || 0,
+              name: item.attributes.rol || "Sin rol"
+            }
+          }
+        })
         setUsuarios(usuariosData)
       }
     } catch (error) {
@@ -318,6 +324,7 @@ export default function Usuarios() {
           value={formData.password}
           onChange={(e) => handleInputChange("password", e.target.value)}
           required={!isEditing}
+          autoComplete="current-password"
         />
       </div>
 

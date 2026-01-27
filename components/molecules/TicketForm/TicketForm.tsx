@@ -11,15 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { CalendarIcon, TicketIcon, Loader2 } from "lucide-react"
 import { TicketFormData } from "@/types/ticket"
+import { UsuariosService } from "@/lib/services/usuariosService"
 
-// Lista hardcodeada de técnicos
-const TECNICOS = [
-  { id: "1", nombre: "Juan Pérez" },
-  { id: "3", nombre: "Carlos Rodríguez" },
-  { id: "5", nombre: "Luis Hernández" },
-  { id: "7", nombre: "Pedro López" },
-  { id: "9", nombre: "Roberto Torres" },
-]
+interface Tecnico {
+  id: string
+  nombre: string
+}
 
 interface TicketFormProps {
   handleSubmit: (formData: TicketFormData, e: React.FormEvent) => void;
@@ -28,6 +25,9 @@ interface TicketFormProps {
 }
 
 export default function TicketForm({ handleSubmit, isLoading = false, initialClienteId = "" }: TicketFormProps) {
+  const [tecnicos, setTecnicos] = useState<Tecnico[]>([])
+  const [loadingTecnicos, setLoadingTecnicos] = useState(true)
+
   // Función para obtener la fecha actual en formato YYYY-MM-DD
   const getCurrentDate = () => {
     const today = new Date()
@@ -44,6 +44,32 @@ export default function TicketForm({ handleSubmit, isLoading = false, initialCli
     id_tecnico: "",
     descripcion: "",
   })
+
+  // Cargar técnicos al montar el componente
+  useEffect(() => {
+    const fetchTecnicos = async () => {
+      try {
+        setLoadingTecnicos(true)
+        const response = await UsuariosService.obtenerTecnicos()
+        
+        // Mapear los técnicos al formato necesario
+        const tecnicosData = response.map((usuario) => ({
+          id: usuario.id.toString(),
+          nombre: usuario.attributes.nombre || "Sin nombre"
+        }))
+        
+        setTecnicos(tecnicosData)
+      } catch (error) {
+        console.error("Error al cargar técnicos:", error)
+        // Si falla, mantener array vacío
+        setTecnicos([])
+      } finally {
+        setLoadingTecnicos(false)
+      }
+    }
+
+    fetchTecnicos()
+  }, [])
 
   // Actualizar id_cliente si cambia initialClienteId
   useEffect(() => {
@@ -138,17 +164,23 @@ export default function TicketForm({ handleSubmit, isLoading = false, initialCli
                 <Select
                   value={formData.id_tecnico}
                   onValueChange={(value) => handleInputChange("id_tecnico", value)}
-                  disabled={isLoading}
+                  disabled={isLoading || loadingTecnicos}
                 >
                   <SelectTrigger className="w-full h-9">
-                    <SelectValue placeholder="Seleccione un técnico" />
+                    <SelectValue placeholder={loadingTecnicos ? "Cargando técnicos..." : "Seleccione un técnico"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {TECNICOS.map((tecnico) => (
-                      <SelectItem key={tecnico.id} value={tecnico.id}>
-                        {tecnico.nombre}
+                    {tecnicos.length === 0 && !loadingTecnicos ? (
+                      <SelectItem value="no-tecnicos" disabled>
+                        No hay técnicos disponibles
                       </SelectItem>
-                    ))}
+                    ) : (
+                      tecnicos.map((tecnico) => (
+                        <SelectItem key={tecnico.id} value={tecnico.id}>
+                          {tecnico.nombre}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-gray-500 mt-1 h-4">Seleccione el técnico asignado</p>
@@ -185,7 +217,7 @@ export default function TicketForm({ handleSubmit, isLoading = false, initialCli
                   <span className="font-medium">Estatus:</span> {formData.estatus || "No seleccionado"}
                 </div>
                 <div>
-                  <span className="font-medium">Técnico:</span> {TECNICOS.find(t => t.id === formData.id_tecnico)?.nombre || formData.id_tecnico || "No asignado"}
+                  <span className="font-medium">Técnico:</span> {tecnicos.find(t => t.id === formData.id_tecnico)?.nombre || formData.id_tecnico || "No asignado"}
                 </div>
               </div>
             </div>

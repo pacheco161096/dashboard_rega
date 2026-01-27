@@ -9,6 +9,7 @@ export interface UsuarioData {
 export interface UsuarioRequest {
     data: UsuarioData;
 }
+
 export interface UsuarioResponse {
     id: number;
     attributes: {
@@ -20,5 +21,18 @@ export interface UsuarioResponse {
         publishedAt: string;
         nombre: string;
         rol: string;
+    };
+}
+
+// Respuesta de Strapi que incluye data y meta
+export interface StrapiResponse<T> {
+    data: T;
+    meta?: {
+        pagination?: {
+            page: number;
+            pageSize: number;
+            pageCount: number;
+            total: number;
+        };
     };
 }
