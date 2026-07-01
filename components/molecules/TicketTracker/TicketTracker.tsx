@@ -45,6 +45,19 @@ interface Ticket {
   nombreTecnico?: string; // Nombre del técnico
 }
 
+interface ClienteApi {
+  id: number;
+  nombre?: string;
+  apellido?: string;
+  calle?: string;
+  num_exterior?: string;
+  num_interior?: string;
+  colonia?: string;
+  ciudad?: string;
+  estado?: string;
+  celular?: string;
+}
+
 interface TicketTrackerProps {
   onStatusUpdate?: () => void;
 }
@@ -60,7 +73,6 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
   const [isUpdating, setIsUpdating] = useState(false)
   const [updateError, setUpdateError] = useState<string | null>(null)
   const [updateSuccess, setUpdateSuccess] = useState(false)
-  const [ticketDetails, setTicketDetails] = useState<any>(null) // Detalles completos del ticket
   const permissions = getUserPermissions()
 
   // Cargar tickets desde la API
@@ -85,7 +97,7 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
         try {
           const clientesResponse = await axios.get('https://monkfish-app-2et8k.ondigitalocean.app/api/users?populate=*')
           if (clientesResponse.data && Array.isArray(clientesResponse.data)) {
-            clientesResponse.data.forEach((cliente: any) => {
+            clientesResponse.data.forEach((cliente: ClienteApi) => {
               const direccion = `${cliente.calle || ''} ${cliente.num_exterior || ''} ${cliente.num_interior || ''}, ${cliente.colonia || ''}, ${cliente.ciudad || ''}`.trim(); 
               clientesMap.set(cliente.id.toString(), {
                 nombre: cliente.nombre || '',
@@ -133,9 +145,9 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
         )
         
         setTickets(transformedTickets)
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("Error al cargar tickets:", error)
-        setError(error.message)
+        setError(error instanceof Error ? error.message : "Error desconocido")
       } finally {
         setIsLoading(false)
       }
@@ -207,7 +219,7 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
       try {
         const clientesResponse = await axios.get('https://monkfish-app-2et8k.ondigitalocean.app/api/users?populate=*')
         if (clientesResponse.data && Array.isArray(clientesResponse.data)) {
-          clientesResponse.data.forEach((cliente: any) => {
+          clientesResponse.data.forEach((cliente: ClienteApi) => {
             const direccion = `${cliente.calle || ''} ${cliente.num_exterior || ''} ${cliente.num_interior || ''}`.trim() || 
                              `${cliente.colonia || ''}, ${cliente.ciudad || ''}, ${cliente.estado || ''}`.trim()
             clientesMap.set(cliente.id.toString(), {
@@ -271,12 +283,11 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
         setSelectedTicket(null)
         setUpdateDescription("")
         setUpdateSuccess(false)
-        setTicketDetails(null)
       }, 1000)
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error al actualizar el ticket:", error)
-      setUpdateError(error.message || "Error al actualizar el ticket")
+      setUpdateError(error instanceof Error ? error.message : "Error al actualizar el ticket")
     } finally {
       setIsUpdating(false)
     }
@@ -428,9 +439,7 @@ console.log('filteredTickets', filteredTickets)
                             <Badge className={getStatusColor(ticket.estatus)}>{ticket.estatus}</Badge>
                           </div>
                           <Button variant="outline" size="sm" onClick={() => {
-                            // Usar directamente los datos del ticket que ya tenemos en la lista
                             setSelectedTicket(ticket)
-                            setTicketDetails(null)
                           }}>
                             <Eye className="h-4 w-4 mr-1" />
                             Ver Detalles

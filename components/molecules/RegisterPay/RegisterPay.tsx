@@ -1,74 +1,63 @@
 "use client";
 
-import { FC,useEffect, useState } from "react";
+import { FC, useEffect, useState, FormEvent, useMemo } from "react";
 
 import s from "./RegisterPay.module.css";
 
 import { Input } from "@/components/atoms/Input/Input";
 
-import axios from "axios";
-
-import { User } from "@/app/dashboard/customers/page"
+import { User, Factura } from "@/app/dashboard/customers/page"
 
 export interface RegisterPayProps {
-  selectedUser:  User[] | undefined;
+  selectedUser: User[] | undefined;
   handleModal: () => void;
-}
-
-interface Factura {
-  id: string;
-  fecha: string;
-  pagado: boolean;
-  total: number; // Agregar a las facturas esta propiedad
 }
 
 export const RegisterPay: FC<RegisterPayProps> = (props) => {
   const { handleModal, selectedUser } = props;
-  const { Facturas }: any = selectedUser;
+  const user = selectedUser?.[0];
+  const facturas = useMemo(() => user?.Facturas ?? [], [user?.Facturas]);
 
-  const [checkedFacturas, setCheckedFacturas]: any = useState({});
-  const [facturasToPay, setFacturasToPay] = useState([]);
+  const [checkedFacturas, setCheckedFacturas] = useState<Record<string, boolean>>({});
+  const [facturasToPay, setFacturasToPay] = useState<Factura[]>([]);
   const [totalToPay, setTotalToPay] = useState(0);
 
   console.log("selectUser:", selectedUser);
 
-  const handleSubmit = (event: any) => {
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     console.log("Facturas a pagar:", facturasToPay);
     console.log("Total a pagar:", totalToPay);
     handleModal();
   };
 
-  const handleInput = (
-    name: string | boolean | number | symbol | any,
-    value: string | boolean | number | symbol | any
-  ) => {
+  const handleInput = () => {
   };
 
   const dataInput = [
     {
-      name: selectedUser?.nombre,
+      name: user?.nombre,
       requerid: true,
       placeHolder: "Nombre",
       type: "text",
       disableField: true,
     },
     {
-      name: selectedUser?.apellido,
+      name: user?.apellido,
       requerid: true,
       placeHolder: "Apellido",
       type: "text",
       disableField: true,
     },
     {
-      name: selectedUser?.tipo_servicio_paquete,
+      name: user?.tipo_servicio_paquete,
       requerid: false,
       placeHolder: "Paquete",
       type: "text",
       disableField: true,
     },
     {
-      name: selectedUser?.id,
+      name: user?.id?.toString(),
       requerid: false,
       placeHolder: "No. Contrato",
       type: "text",
@@ -76,23 +65,25 @@ export const RegisterPay: FC<RegisterPayProps> = (props) => {
     },
   ];
 
-  const handleCheckboxChange = (factura: any) => {
+  const handleCheckboxChange = (factura: Factura) => {
+    const facturaId = factura.id.toString();
     setCheckedFacturas({
       ...checkedFacturas,
-      [factura.id]: !checkedFacturas[factura.id],
+      [facturaId]: !checkedFacturas[facturaId],
     });
   };
 
   useEffect(() => {
-    const selected: any = Object.keys(checkedFacturas)
+    const selected = Object.keys(checkedFacturas)
       .filter((key) => checkedFacturas[key])
-      .map((key) => Facturas.find((f:any) => f.id === key));
+      .map((key) => facturas.find((f) => f.id.toString() === key))
+      .filter((f): f is Factura => f !== undefined);
 
-    setFacturasToPay(selected.filter(Boolean));
-  }, [checkedFacturas, Facturas]);
+    setFacturasToPay(selected);
+  }, [checkedFacturas, facturas]);
 
   useEffect(() => {
-    const newTotal = facturasToPay.reduce((sum, factura) => sum + factura.total, 0); // Que factura tenga el total en el objeto
+    const newTotal = facturasToPay.reduce((sum, factura) => sum + factura.precio, 0);
     setTotalToPay(newTotal);
   }, [facturasToPay]);
 
@@ -109,10 +100,10 @@ export const RegisterPay: FC<RegisterPayProps> = (props) => {
           {dataInput?.map((item, i) => (
             <Input
               key={i}
-              nombre={item.name}
-              funcion={() => handleInput}
-              valor={item?.name || ""}
-              requerido={item.requerid}
+              name={item.placeHolder}
+              funcion={handleInput}
+              value={item?.name?.toString() || ""}
+              required={item.requerid}
               placeHolder={item.placeHolder}
               type={item.type}
               isEdited={item?.disableField || false}
@@ -121,15 +112,16 @@ export const RegisterPay: FC<RegisterPayProps> = (props) => {
         </div>
         <h3>Facturas</h3>
         <ul>
-          {Facturas.map((factura: any) => (
+          {facturas.map((factura) => (
             <li className="mt-2 mb-3" key={factura.id}>
               <Input
-                checked={checkedFacturas[factura.id] || false}
+                checked={checkedFacturas[factura.id.toString()] || false}
                 funcion={() => handleCheckboxChange(factura)}
-                nombre={factura.fecha}
-                requerido={false}
+                name={factura.fecha}
+                required={false}
                 type="checkbox"
-                valor={factura.pagado}
+                value={factura.pagado.toString()}
+                placeHolder={factura.fecha}
               />
             </li>
           ))}
