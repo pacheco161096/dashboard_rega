@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import { TicketRequest, TicketResponse, TicketListResponse } from '@/types/ticket';
 
 const API_BASE_URL = 'https://monkfish-app-2et8k.ondigitalocean.app/api';
@@ -42,7 +42,7 @@ export class TicketService {
     try {
       const response = await this.axiosInstance.post<TicketResponse>('/tickets', ticketData);
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       throw this.handleError(error);
     }
   }
@@ -55,7 +55,7 @@ export class TicketService {
     try {
       const response = await this.axiosInstance.get<TicketListResponse>('/tickets?populate=*');
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       throw this.handleError(error);
     }
   }
@@ -69,7 +69,7 @@ export class TicketService {
     try {
       const response = await this.axiosInstance.get<TicketResponse>(`/tickets/${id}`);
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       throw this.handleError(error);
     }
   }
@@ -84,7 +84,7 @@ export class TicketService {
     try {
       const response = await this.axiosInstance.put<TicketResponse>(`/tickets/${id}`, ticketData);
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       throw this.handleError(error);
     }
   }
@@ -94,13 +94,16 @@ export class TicketService {
    * @param error - Error de Axios
    * @returns Error personalizado
    */
-  private handleError(error: any): Error {
+  private handleError(error: unknown): Error {
     let errorMessage = 'Error desconocido';
 
-    if (error.response) {
+    if (axios.isAxiosError(error)) {
+      const axiosError = error as AxiosError<{ error?: string }>;
+
+    if (axiosError.response) {
       // Error de respuesta del servidor
-      const status = error.response.status;
-      const data = error.response.data;
+      const status = axiosError.response.status;
+      const data = axiosError.response.data;
       
       switch (status) {
         case 400:
@@ -119,14 +122,17 @@ export class TicketService {
           errorMessage = 'Error interno del servidor';
           break;
         default:
-          errorMessage = data?.error || `Error ${status}: ${error.response.statusText}`;
+          errorMessage = data?.error || `Error ${status}: ${axiosError.response.statusText}`;
       }
-    } else if (error.request) {
+    } else if (axiosError.request) {
       // Error de red
       errorMessage = 'Error de conexión. Verifique su conexión a internet.';
     } else {
       // Error de configuración
-      errorMessage = error.message || 'Error de configuración';
+      errorMessage = axiosError.message || 'Error de configuración';
+    }
+    } else if (error instanceof Error) {
+      errorMessage = error.message;
     }
 
     return new Error(errorMessage);

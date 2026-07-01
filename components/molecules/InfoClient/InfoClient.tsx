@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { PersonFillIcon, SignOutIcon } from "@primer/octicons-react";
 import s from "../../../app/global.module.css";
 import { useRouter } from "next/navigation";
-import { ROLES_ARRAY, UserRole, ROLE_NAMES } from "@/lib/roles";
+import { ROLES_ARRAY, UserRole } from "@/lib/roles";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export interface UserLoginInt {

@@ -2,59 +2,58 @@
 import { useState, useMemo } from 'react'
 import { NavItem } from '@/components/atoms/NavItem/NavItem'
 import s from './Navbar.module.css'
-import { HomeIcon, PeopleIcon, PackageIcon, CreditCardIcon } from '@primer/octicons-react'
+import { HomeIcon, PeopleIcon, CreditCardIcon } from '@primer/octicons-react'
 import { usePathname } from "next/navigation";
 import { ChartBarIcon, UserCog } from 'lucide-react';
 import { getUserPermissions } from '@/lib/roles';
+
+const ALL_LINKS = [
+  {
+    name:'Inicio',
+    href:'/dashboard',
+    tooltip:'Inicio',
+    icon:<HomeIcon size={20}/>,
+    permission: 'canAccessInicio'
+  },
+  {
+    name:'Clientes',
+    href:'/dashboard/customers',
+    tooltip:'Clientes',
+    icon:<PeopleIcon size={20}/>,
+    permission: 'canAccessClientes'
+  },
+  {
+    name:'Cobranza',
+    href:'/dashboard/cobranza',
+    tooltip:'Cobranza', 
+    icon:<CreditCardIcon size={20}/>,
+    permission: 'canAccessCobranza'
+  },
+  {
+    name:'Reportes',
+    href:'/dashboard/reportes',
+    tooltip:'Reportes', 
+    icon:<ChartBarIcon  size={20}/>,
+    permission: 'canAccessReportes'
+  },
+  {
+    name:'Usuarios',
+    href:'/dashboard/usuarios',
+    tooltip:'Usuarios', 
+    icon:<UserCog  size={20}/>,
+    permission: 'canAccessUsuarios'
+  },
+] as const;
 
 export const Navbar = () => {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const permissions = getUserPermissions();
   
-  // Definir todos los links posibles
-  const allLinks = [
-    {
-      name:'Inicio',
-      href:'/dashboard',
-      tooltip:'Inicio',
-      icon:<HomeIcon size={20}/>,
-      permission: 'canAccessInicio'
-    },
-    {
-      name:'Clientes',
-      href:'/dashboard/customers',
-      tooltip:'Clientes',
-      icon:<PeopleIcon size={20}/>,
-      permission: 'canAccessClientes'
-    },
-    {
-      name:'Cobranza',
-      href:'/dashboard/cobranza',
-      tooltip:'Cobranza', 
-      icon:<CreditCardIcon size={20}/>,
-      permission: 'canAccessCobranza'
-    },
-    {
-      name:'Reportes',
-      href:'/dashboard/reportes',
-      tooltip:'Reportes', 
-      icon:<ChartBarIcon  size={20}/>,
-      permission: 'canAccessReportes'
-    },
-    {
-      name:'Usuarios',
-      href:'/dashboard/usuarios',
-      tooltip:'Usuarios', 
-      icon:<UserCog  size={20}/>,
-      permission: 'canAccessUsuarios'
-    },
-  ]
-  
   // Filtrar links según permisos
   const nameLinks = useMemo(() => {
-    if (!permissions) return allLinks; // Si no hay permisos, mostrar todos (fallback)
-    return allLinks.filter(link => permissions[link.permission as keyof typeof permissions] === true);
+    if (!permissions) return ALL_LINKS;
+    return ALL_LINKS.filter(link => permissions[link.permission as keyof typeof permissions] === true);
   }, [permissions]);
 
   const toggleMobileMenu = () => {
