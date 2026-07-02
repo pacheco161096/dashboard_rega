@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from "react"
+import dynamic from "next/dynamic"
 import axios from 'axios'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,10 +9,28 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { PencilIcon, TrashIcon } from "@primer/octicons-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Loader2 } from "lucide-react"
 import { UsuariosService } from "@/lib/services/usuariosService"
 import { UsuarioRequest, UsuarioData } from "@/types/usuario"
 import { useToast } from "@/hooks/use-toast"
-import { ROLES_ARRAY } from "@/lib/roles"
+import { getAllRolesForSelect, ROLES_ARRAY } from "@/lib/roles"
+import type { RoleSelectOption } from "@/types/rolesPermissions"
+
+const RolesPermissionsManager = dynamic(
+  () =>
+    import("@/components/molecules/RolesPermissions/RolesPermissionsManager").then(
+      (mod) => mod.RolesPermissionsManager
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+      </div>
+    ),
+  }
+)
 
 interface Usuario {
   id: number
@@ -19,17 +38,24 @@ interface Usuario {
   username: string
   email: string
   role: {
-    id: number
+    id: number | string
     name: string
+    value?: string
   }
 }
-
-const ROLES = ROLES_ARRAY
 
 const API_BASE_URL = 'https://monkfish-app-2et8k.ondigitalocean.app/api'
 
 export default function Usuarios() {
   const { toast } = useToast()
+  const [activeTab, setActiveTab] = useState("usuarios")
+  const [availableRoles, setAvailableRoles] = useState<RoleSelectOption[]>(
+    ROLES_ARRAY.map((role) => ({
+      id: role.id,
+      name: role.name,
+      value: role.value,
+    }))
+  )
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
   const [loading, setLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
@@ -47,6 +73,14 @@ export default function Usuarios() {
     role: "",
   })
 
+  const refreshAvailableRoles = useCallback(() => {
+    setAvailableRoles(getAllRolesForSelect())
+  }, [])
+
+  useEffect(() => {
+    refreshAvailableRoles()
+  }, [refreshAvailableRoles, activeTab])
+
   // Cargar usuarios
   const fetchUsuarios = useCallback(async () => {
     try {
@@ -55,7 +89,9 @@ export default function Usuarios() {
       if (response.data?.data) {
         const usuariosData = response.data.data.map((item: { id: number; attributes: { nombre?: string; usuario?: string; email?: string; rol?: string } }) => {
           // Buscar el rol en ROLES_ARRAY basándose en el nombre del rol
-          const rolEncontrado = ROLES.find(r => r.name === item.attributes.rol)
+          const rolEncontrado = availableRoles.find(
+            (r) => r.name === item.attributes.rol || r.value === item.attributes.rol
+          )
           
           return {
             id: item.id,
@@ -64,7 +100,8 @@ export default function Usuarios() {
             email: item.attributes.email || "",
             role: {
               id: rolEncontrado?.id || 0,
-              name: item.attributes.rol || "Sin rol"
+              name: item.attributes.rol || "Sin rol",
+              value: rolEncontrado?.value || "",
             }
           }
         })
@@ -80,7 +117,7 @@ export default function Usuarios() {
     } finally {
       setLoading(false)
     }
-  }, [toast])
+  }, [toast, availableRoles])
 
   useEffect(() => {
     fetchUsuarios()
@@ -141,7 +178,7 @@ export default function Usuarios() {
       username: usuario.username,
       email: usuario.email,
       password: "",
-      role: usuario.role.id.toString(),
+      role: usuario.role.value || availableRoles.find((r) => r.name === usuario.role.name)?.value || "",
     })
     // Abrir modal solo en pantallas menores a 2xl
     // En pantallas 2xl, el form se llena automáticamente a la derecha (no se usa modal)
@@ -165,7 +202,7 @@ export default function Usuarios() {
           usuario: formData.username,
           email: formData.email,
           contrasena: formData.password,
-          rol: ROLES.find((rol) => rol.id.toString() === formData.role)?.name,
+          rol: availableRoles.find((rol) => rol.value === formData.role)?.name,
         }
       }
 
@@ -187,7 +224,7 @@ export default function Usuarios() {
         variant: "destructive",
       })
     }
-  }, [formData, toast, resetForm, fetchUsuarios])
+  }, [formData, toast, resetForm, fetchUsuarios, availableRoles])
 
   // Actualizar usuario
   const handleUpdate = useCallback(async (e: React.FormEvent) => {
@@ -210,7 +247,7 @@ export default function Usuarios() {
 
       // Incluir role si se seleccionó
       if (formData.role) {
-        payloadData.rol = ROLES.find((rol) => rol.id.toString() === formData.role)?.name
+        payloadData.rol = availableRoles.find((rol) => rol.value === formData.role)?.name
       }
 
       const payload: UsuarioRequest = {
@@ -235,7 +272,7 @@ export default function Usuarios() {
         variant: "destructive",
       })
     }
-  }, [formData, selectedUsuario, toast, resetForm, fetchUsuarios])
+  }, [formData, selectedUsuario, toast, resetForm, fetchUsuarios, availableRoles])
 
   // Eliminar usuario
   const handleDelete = async () => {
@@ -339,8 +376,8 @@ export default function Usuarios() {
             <SelectValue placeholder="Seleccione un rol" />
           </SelectTrigger>
           <SelectContent>
-            {ROLES.map((rol) => (
-              <SelectItem key={rol.id} value={rol.value}>
+            {availableRoles.map((rol) => (
+              <SelectItem key={String(rol.value)} value={String(rol.value)}>
                 {rol.name}
               </SelectItem>
             ))}
@@ -371,6 +408,13 @@ export default function Usuarios() {
 
   return (
     <div className="w-full p-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="mb-6">
+          <TabsTrigger value="usuarios">Usuarios</TabsTrigger>
+          <TabsTrigger value="roles">Roles y permisos</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="usuarios" className="mt-0">
       {/* Header con botón y buscador */}
       <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mb-6">
         {/* Botón solo visible en pantallas menores a 2xl (donde se usa el modal) */}
@@ -581,6 +625,12 @@ export default function Usuarios() {
           </div>
         </div>
       )}
+        </TabsContent>
+
+        <TabsContent value="roles" className="mt-0">
+          {activeTab === "roles" ? <RolesPermissionsManager /> : null}
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

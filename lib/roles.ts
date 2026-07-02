@@ -1,4 +1,7 @@
 // Enumeración de roles del sistema
+import { rolesPermissionsService } from "@/lib/services/rolesPermissionsService";
+import { moduleMapToFlatPermissions } from "@/lib/utils/rolesPermissionsConfig";
+
 export enum UserRole {
   ADMIN = "1",
   SUPERVISOR = "2",
@@ -114,7 +117,27 @@ export const ROLE_PERMISSIONS = {
 export function getUserPermissions() {
   const userRole = getUserRole()
   if (!userRole) return null
+
+  if (typeof window !== "undefined") {
+    const roleDefinition = rolesPermissionsService.getRoleById(userRole)
+    if (roleDefinition) {
+      return moduleMapToFlatPermissions(roleDefinition.permissions)
+    }
+  }
+
   return ROLE_PERMISSIONS[userRole] || null
+}
+
+export function getAllRolesForSelect() {
+  if (typeof window === "undefined") {
+    return ROLES_ARRAY.map((role) => ({
+      id: role.id,
+      name: role.name,
+      value: role.value,
+    }))
+  }
+
+  return rolesPermissionsService.getRolesForSelect()
 }
 
 // Función para obtener la ruta de redirección después del login según el rol

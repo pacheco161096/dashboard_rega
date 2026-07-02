@@ -1,11 +1,19 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { Button, SearchBox, Table, CreateCustomer,CustomerForm} from "@/components/index";
-import axios from 'axios';
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { Button, SearchBox, Table, CreateCustomer, CustomerForm } from "@/components/index";
 import s from './customers.module.css'
 import { useRouter } from "next/navigation";
 import { getUserPermissions } from "@/lib/roles";
+import {
+  customersService,
+  CustomerListItem,
+  ServiceStatusFilter,
+} from "@/lib/services/customersService";
+import {
+  ESTADO_SERVICIO_API_HABILITADO,
+  SERVICE_STATUS_FILTERS,
+} from "@/lib/utils/customerServiceStatus";
 
 export type Role = {
   id: number;
@@ -53,6 +61,8 @@ export type User = {
   pais: string;
   tipo_servicio_paquete: string;
   estatus_servicio: boolean;
+  /** Campo futuro: 'activo' | 'suspendido' | 'cancelado' */
+  estado_servicio?: string | null;
   createdAt: string;
   updatedAt: string;
   id_mikrotik: string;
@@ -68,41 +78,62 @@ export type CurrentPlan = {
   precio: number;
 }
 
-export default function Customers() {
+const SEARCH_DEBOUNCE_MS = 400;
 
+export default function Customers() {
   const [showModalClient, setShowModalClient] = useState(false)
   const [updateCliente, setUpdateCliente] = useState<User[]>()
   const [idCliente, setIdCliente] = useState<string | number>("")
   const [isNewCliente, setIsNewCliente] = useState(false)
 
-  const URL = ("https://monkfish-app-2et8k.ondigitalocean.app/api/users?populate=*")
-  const [data, setData] = useState<User[]>([]);
+  const [data, setData] = useState<CustomerListItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [serviceStatusFilter, setServiceStatusFilter] = useState<ServiceStatusFilter>("activos");
   const itemsPerPage = 10;
   const router = useRouter();
   const permissions = getUserPermissions();
+  const prevModalOpen = useRef(showModalClient);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setCurrentPage(1);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const fetchData = useCallback(async () => {
     setLoading(true)
+    setFetchError(null)
     try {
-      const response = await axios.get(URL);
-      const users = response.data || [];
+      const users = await customersService.fetchCustomersList({
+        statusFilter: serviceStatusFilter,
+        search: debouncedSearch,
+      });
       setData(users);
     } catch (err) {
-      console.log('error' + err)
+      console.error("Error al cargar clientes:", err)
+      setFetchError(err instanceof Error ? err.message : "Error al cargar clientes")
       setData([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [serviceStatusFilter, debouncedSearch]);
 
   useEffect(() => {
     fetchData();
-  }, [showModalClient, fetchData]);
+  }, [fetchData]);
 
-  /* Clientes */
+  useEffect(() => {
+    if (prevModalOpen.current && !showModalClient) {
+      fetchData();
+    }
+    prevModalOpen.current = showModalClient;
+  }, [showModalClient, fetchData]);
 
   const handleModalClient = useCallback(() => {
     setShowModalClient(!showModalClient)
@@ -114,83 +145,83 @@ export default function Customers() {
     setShowModalClient(!showModalClient)
   }, [showModalClient])
 
-  const handleUpdateCliente = useCallback((data: User[]) => {  
-    setUpdateCliente(data)
+  const handleUpdateCliente = useCallback((data: CustomerListItem[]) => {
+    setUpdateCliente(data as unknown as User[])
     setIdCliente(data[0]?.id)
     setIsNewCliente(false);
     setShowModalClient(prev => !prev);
-  }, []); // 🔹 Sin dependencias para evitar renders innecesarios
+  }, []);
 
-  /* Pagos */
-
-  const handleRegisterPay = (user: User[]) => {
+  const handleRegisterPay = (user: CustomerListItem[]) => {
     const storedCaja = sessionStorage.getItem("caja");
 
     if (storedCaja) {
       sessionStorage.setItem("selectedUser", JSON.stringify(user));
     }
-    
+
     router.replace("/dashboard/cobranza");
   };
 
-  /* Tickets */
-  const handleCreateTicket = useCallback((user: User[]) => {
+  const handleCreateTicket = useCallback((user: CustomerListItem[]) => {
     const clienteId = user[0]?.id?.toString() || "";
     router.push(`/dashboard/reportes?create=true&clienteId=${clienteId}`);
   }, [router]);
 
   const handleFilter = useCallback((item: string) => {
     setSearchQuery(item);
-    setCurrentPage(1); // Resetear a la primera página al buscar
   }, []);
 
-  // Filtrar datos basado en la búsqueda (busca en todos los clientes)
-  const filteredCustomers = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return data;
-    }
+  const handleServiceStatusFilter = useCallback((filter: ServiceStatusFilter) => {
+    setServiceStatusFilter(filter);
+    setCurrentPage(1);
+  }, []);
 
-    const normalized = searchQuery.trim().toLowerCase();
-    
-    return data.filter((user) => {
-      const matchId = user.id.toString().includes(normalized);
-      const matchName = user.nombre?.toLowerCase().includes(normalized);
-      const matchEmail = user.email?.toLowerCase().includes(normalized);
-      const matchApellido = user.apellido?.toLowerCase().includes(normalized);
-      const matchCelular = user.celular?.includes(normalized);
-      
-      return matchId || matchName || matchEmail || matchApellido || matchCelular;
-    });
-  }, [data, searchQuery]);
-
-  // Calcular datos paginados
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    return filteredCustomers.slice(startIndex, endIndex);
-  }, [filteredCustomers, currentPage, itemsPerPage]);
+    return data.slice(startIndex, endIndex);
+  }, [data, currentPage, itemsPerPage]);
 
-  // Calcular total de páginas
   const totalPages = useMemo(() => {
-    return Math.ceil(filteredCustomers.length / itemsPerPage);
-  }, [filteredCustomers.length, itemsPerPage]);
+    return Math.ceil(data.length / itemsPerPage);
+  }, [data.length, itemsPerPage]);
+
+  const tableData = paginatedData as unknown as User[];
 
   return (
     <div className="w-full h-full">
       {isNewCliente ? <CreateCustomer open={showModalClient} onOpenChange={handleModalClient} /> : <CustomerForm open={showModalClient} onOpenChange={handleModalClient} mode="edit" userData={updateCliente ? updateCliente : null} userId={idCliente}/>}
-      
-      {/* Header con acciones */}
+
       <div className={s.header}>
         {permissions?.canCreateClient && (
-          <Button onClick={handleNewCliente} variant="primary" size="md" className="flex items-center gap-2">
+          <Button onClick={handleNewCliente} variant="primary" size="md" className="flex items-center gap-2 shrink-0">
             <i className="fa-solid fa-plus text-sm"></i>
             <span>Nuevo Cliente</span>
           </Button>
         )}
-        <SearchBox handleFilter={handleFilter} />
+        <div className={s.headerActions}>
+          <div className={s.searchWrapper}>
+            <SearchBox handleFilter={handleFilter} />
+          </div>
+          <div className={s.filters}>
+            {SERVICE_STATUS_FILTERS.map(({ value, label }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => handleServiceStatusFilter(value)}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors whitespace-nowrap ${
+                  serviceStatusFilter === value
+                    ? "bg-indigo-600 text-white"
+                    : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* Espaciado y contenedor de la tabla */}
       <div className="mt-8 w-full">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16">
@@ -199,28 +230,44 @@ export default function Customers() {
             </div>
             <p className="mt-4 text-gray-500 text-sm font-medium">Cargando clientes...</p>
           </div>
+        ) : fetchError ? (
+          <div className="flex flex-col items-center justify-center py-16 px-4">
+            <p className="text-red-600 mb-2">{fetchError}</p>
+            <button
+              type="button"
+              onClick={fetchData}
+              className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            >
+              Reintentar
+            </button>
+          </div>
         ) : (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-            {(!data || data.length === 0) ? (
+            {data.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 px-4">
                 <i className="fa-regular fa-users text-5xl text-gray-300 mb-4"></i>
-                <p className="text-gray-500 text-lg font-medium mb-2">No hay clientes registrados</p>
-                <p className="text-gray-400 text-sm text-center">Comienza agregando tu primer cliente</p>
+                <p className="text-gray-500 text-lg font-medium mb-2">No se encontraron clientes</p>
+                <p className="text-gray-400 text-sm text-center">
+                  {serviceStatusFilter === "cancelados" && !ESTADO_SERVICIO_API_HABILITADO
+                    ? "El estatus Cancelado estará disponible cuando la API lo soporte"
+                    : searchQuery || serviceStatusFilter !== "todos"
+                      ? "Prueba con otro filtro o término de búsqueda"
+                      : "Comienza agregando tu primer cliente"}
+                </p>
               </div>
             ) : (
               <>
-                <Table 
-                  data={paginatedData} 
-                  handleUpdateCliente={handleUpdateCliente} 
-                  handleRegisterPay={handleRegisterPay}
-                  handleCreateTicket={handleCreateTicket}
+                <Table
+                  data={tableData}
+                  handleUpdateCliente={handleUpdateCliente as (user: User[]) => void}
+                  handleRegisterPay={handleRegisterPay as (user: User[]) => void}
+                  handleCreateTicket={handleCreateTicket as (user: User[]) => void}
                 />
-                {/* Controles de paginación */}
                 {totalPages > 1 && (
                   <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t border-gray-200">
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-gray-700">
-                        Mostrando {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredCustomers.length)} de {filteredCustomers.length} clientes
+                        Mostrando {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, data.length)} de {data.length} clientes
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -234,13 +281,11 @@ export default function Customers() {
                       <div className="flex items-center gap-1">
                         {Array.from({ length: totalPages }, (_, i) => i + 1)
                           .filter(page => {
-                            // Mostrar primera, última, actual y adyacentes
-                            return page === 1 || 
-                                   page === totalPages || 
+                            return page === 1 ||
+                                   page === totalPages ||
                                    (page >= currentPage - 1 && page <= currentPage + 1);
                           })
                           .map((page, index, array) => {
-                            // Agregar puntos suspensivos si hay gap
                             const showEllipsis = index > 0 && array[index - 1] !== page - 1;
                             return (
                               <div key={page} className="flex items-center gap-1">
