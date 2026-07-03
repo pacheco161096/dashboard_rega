@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -12,6 +12,15 @@ import { Textarea } from "@/components/ui/textarea"
 import { CalendarIcon, TicketIcon, Loader2 } from "lucide-react"
 import { TicketFormData } from "@/types/ticket"
 import { UsuariosService } from "@/lib/services/usuariosService"
+import ClientSearchSelect from "@/components/molecules/ClientSearchSelect/ClientSearchSelect"
+import {
+  firstFieldErrorMessage,
+  hasFieldErrors,
+  validateTicketForm,
+  type FieldErrors,
+} from "@/lib/utils/formValidation"
+import { useToast } from "@/hooks/use-toast"
+import type { CustomerListItem } from "@/lib/services/customersService"
 
 interface Tecnico {
   id: string
@@ -24,18 +33,20 @@ interface TicketFormProps {
   initialClienteId?: string;
 }
 
+function getCurrentDate() {
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, "0")
+  const day = String(today.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
 export default function TicketForm({ handleSubmit, isLoading = false, initialClienteId = "" }: TicketFormProps) {
+  const { toast } = useToast()
   const [tecnicos, setTecnicos] = useState<Tecnico[]>([])
   const [loadingTecnicos, setLoadingTecnicos] = useState(true)
-
-  // Función para obtener la fecha actual en formato YYYY-MM-DD
-  const getCurrentDate = () => {
-    const today = new Date()
-    const year = today.getFullYear()
-    const month = String(today.getMonth() + 1).padStart(2, '0')
-    const day = String(today.getDate()).padStart(2, '0')
-    return `${year}-${month}-${day}`
-  }
+  const [errors, setErrors] = useState<FieldErrors>({})
+  const [selectedClientLabel, setSelectedClientLabel] = useState("")
 
   const [formData, setFormData] = useState<TicketFormData>({
     fecha: getCurrentDate(),
@@ -45,33 +56,34 @@ export default function TicketForm({ handleSubmit, isLoading = false, initialCli
     descripcion: "",
   })
 
-  // Cargar técnicos al montar el componente
   useEffect(() => {
     const fetchTecnicos = async () => {
       try {
         setLoadingTecnicos(true)
         const response = await UsuariosService.obtenerTecnicos()
-        
-        // Mapear los técnicos al formato necesario
+
         const tecnicosData = response.map((usuario) => ({
           id: usuario.id.toString(),
-          nombre: usuario.attributes.nombre || "Sin nombre"
+          nombre: usuario.attributes.nombre || "Sin nombre",
         }))
-        
+
         setTecnicos(tecnicosData)
       } catch (error) {
         console.error("Error al cargar técnicos:", error)
-        // Si falla, mantener array vacío
         setTecnicos([])
+        toast({
+          title: "Error al cargar técnicos",
+          description: "No se pudieron obtener los técnicos. Intente recargar la página.",
+          variant: "destructive",
+        })
       } finally {
         setLoadingTecnicos(false)
       }
     }
 
     fetchTecnicos()
-  }, [])
+  }, [toast])
 
-  // Actualizar id_cliente si cambia initialClienteId
   useEffect(() => {
     if (initialClienteId) {
       setFormData((prev) => ({
@@ -81,16 +93,67 @@ export default function TicketForm({ handleSubmit, isLoading = false, initialCli
     }
   }, [initialClienteId])
 
+  const isFormComplete = useMemo(
+    () => !hasFieldErrors(validateTicketForm(formData)),
+    [formData]
+  )
+
+  const clearFieldError = (field: keyof TicketFormData) => {
+    setErrors((prev) => {
+      if (!prev[field]) return prev
+      const next = { ...prev }
+      delete next[field]
+      return next
+    })
+  }
+
   const handleInputChange = (field: keyof TicketFormData, value: string) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
     }))
+    clearFieldError(field)
+  }
+
+  const handleClientChange = (clientId: string, client?: CustomerListItem | null) => {
+    handleInputChange("id_cliente", clientId)
+    if (client) {
+      const fullName = [client.nombre, client.apellido].filter(Boolean).join(" ").trim()
+      setSelectedClientLabel(fullName ? `${fullName} · ID: ${client.id}` : `ID: ${client.id}`)
+    } else {
+      setSelectedClientLabel("")
+    }
   }
 
   const handleFormSubmit = (e: React.FormEvent) => {
-    if (isLoading) return; // Prevenir envío múltiple
-    handleSubmit(formData, e);
+    e.preventDefault()
+    if (isLoading) return
+
+    const validationErrors = validateTicketForm(formData)
+    if (hasFieldErrors(validationErrors)) {
+      setErrors(validationErrors)
+      toast({
+        title: "Formulario incompleto",
+        description: firstFieldErrorMessage(validationErrors),
+        variant: "destructive",
+      })
+      return
+    }
+
+    setErrors({})
+    handleSubmit(formData, e)
+  }
+
+  const handleReset = () => {
+    setFormData({
+      fecha: getCurrentDate(),
+      id_cliente: "",
+      estatus: "En proceso",
+      id_tecnico: "",
+      descripcion: "",
+    })
+    setSelectedClientLabel("")
+    setErrors({})
   }
 
   return (
@@ -104,10 +167,9 @@ export default function TicketForm({ handleSubmit, isLoading = false, initialCli
           <CardDescription>Complete el formulario para levantar un nuevo ticket de soporte</CardDescription>
         </CardHeader>
 
-        <form onSubmit={handleFormSubmit}>
+        <form onSubmit={handleFormSubmit} noValidate>
           <CardContent className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Fecha */}
               <div className="flex flex-col">
                 <Label htmlFor="fecha" className="flex items-center gap-2 mb-2 h-5">
                   <CalendarIcon className="h-4 w-4 flex-shrink-0" />
@@ -118,37 +180,34 @@ export default function TicketForm({ handleSubmit, isLoading = false, initialCli
                   type="date"
                   value={formData.fecha}
                   onChange={(e) => handleInputChange("fecha", e.target.value)}
-                  required
-                  className="w-full h-9"
+                  className={`w-full h-9 ${errors.fecha ? "border-red-500" : ""}`}
                   disabled={isLoading}
                 />
+                {errors.fecha && <p className="mt-1 text-xs text-red-600">{errors.fecha}</p>}
               </div>
 
-              {/* ID Cliente */}
               <div className="flex flex-col">
-                <Label htmlFor="id_cliente" className="mb-2 h-5 flex items-center">ID Cliente</Label>
-                <Input
-                  id="id_cliente"
-                  type="text"
-                  placeholder="Ingrese el ID del cliente"
+                <Label htmlFor="cliente" className="mb-2 h-5 flex items-center">
+                  Cliente
+                </Label>
+                <ClientSearchSelect
                   value={formData.id_cliente}
-                  onChange={(e) => handleInputChange("id_cliente", e.target.value)}
-                  required
-                  className="w-full h-9"
+                  onChange={handleClientChange}
+                  onResolvedLabel={setSelectedClientLabel}
                   disabled={isLoading}
+                  error={errors.id_cliente}
+                  placeholder="Buscar por nombre o ID..."
                 />
               </div>
 
-              {/* Estatus */}
               <div className="flex flex-col">
                 <Label htmlFor="estatus" className="mb-2 h-5 flex items-center">Estatus</Label>
                 <Select
                   value={formData.estatus}
                   onValueChange={(value) => handleInputChange("estatus", value)}
-                  required
                   disabled={isLoading}
                 >
-                  <SelectTrigger className="w-full h-9">
+                  <SelectTrigger className={`w-full h-9 ${errors.estatus ? "border-red-500" : ""}`}>
                     <SelectValue placeholder="Seleccione el estatus" />
                   </SelectTrigger>
                   <SelectContent>
@@ -156,9 +215,9 @@ export default function TicketForm({ handleSubmit, isLoading = false, initialCli
                     <SelectItem value="Finalizado">Finalizado</SelectItem>
                   </SelectContent>
                 </Select>
+                {errors.estatus && <p className="mt-1 text-xs text-red-600">{errors.estatus}</p>}
               </div>
 
-              {/* Técnico */}
               <div className="flex flex-col">
                 <Label htmlFor="id_tecnico" className="mb-2 h-5 flex items-center">Técnico</Label>
                 <Select
@@ -166,7 +225,7 @@ export default function TicketForm({ handleSubmit, isLoading = false, initialCli
                   onValueChange={(value) => handleInputChange("id_tecnico", value)}
                   disabled={isLoading || loadingTecnicos}
                 >
-                  <SelectTrigger className="w-full h-9">
+                  <SelectTrigger className={`w-full h-9 ${errors.id_tecnico ? "border-red-500" : ""}`}>
                     <SelectValue placeholder={loadingTecnicos ? "Cargando técnicos..." : "Seleccione un técnico"} />
                   </SelectTrigger>
                   <SelectContent>
@@ -183,11 +242,14 @@ export default function TicketForm({ handleSubmit, isLoading = false, initialCli
                     )}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-gray-500 mt-1 h-4">Seleccione el técnico asignado</p>
+                {errors.id_tecnico ? (
+                  <p className="mt-1 text-xs text-red-600">{errors.id_tecnico}</p>
+                ) : (
+                  <p className="text-xs text-gray-500 mt-1 h-4">Seleccione el técnico asignado</p>
+                )}
               </div>
             </div>
 
-            {/* Descripción del Reporte */}
             <div className="space-y-2">
               <Label htmlFor="descripcion">Descripción del Reporte</Label>
               <Textarea
@@ -195,15 +257,17 @@ export default function TicketForm({ handleSubmit, isLoading = false, initialCli
                 placeholder="Describa detalladamente el problema o solicitud..."
                 value={formData.descripcion}
                 onChange={(e) => handleInputChange("descripcion", e.target.value)}
-                required
                 rows={5}
-                className="w-full resize-none"
+                className={`w-full resize-none ${errors.descripcion ? "border-red-500" : ""}`}
                 disabled={isLoading}
               />
-              <p className="text-xs text-gray-500">Proporcione todos los detalles relevantes del problema</p>
+              {errors.descripcion ? (
+                <p className="text-xs text-red-600">{errors.descripcion}</p>
+              ) : (
+                <p className="text-xs text-gray-500">Proporcione todos los detalles relevantes del problema</p>
+              )}
             </div>
 
-            {/* Resumen de datos */}
             <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
               <h3 className="font-semibold text-blue-900 mb-2">Resumen del Ticket</h3>
               <div className="grid grid-cols-2 gap-2 text-sm">
@@ -211,13 +275,15 @@ export default function TicketForm({ handleSubmit, isLoading = false, initialCli
                   <span className="font-medium">Fecha:</span> {formData.fecha || "No especificada"}
                 </div>
                 <div>
-                  <span className="font-medium">Cliente:</span> {formData.id_cliente || "No especificado"}
+                  <span className="font-medium">Cliente:</span>{" "}
+                  {selectedClientLabel || (formData.id_cliente ? `ID: ${formData.id_cliente}` : "No especificado")}
                 </div>
                 <div>
                   <span className="font-medium">Estatus:</span> {formData.estatus || "No seleccionado"}
                 </div>
                 <div>
-                  <span className="font-medium">Técnico:</span> {tecnicos.find(t => t.id === formData.id_tecnico)?.nombre || formData.id_tecnico || "No asignado"}
+                  <span className="font-medium">Técnico:</span>{" "}
+                  {tecnicos.find((t) => t.id === formData.id_tecnico)?.nombre || formData.id_tecnico || "No asignado"}
                 </div>
               </div>
             </div>
@@ -228,23 +294,15 @@ export default function TicketForm({ handleSubmit, isLoading = false, initialCli
               type="button"
               variant="outline"
               className="flex-1 bg-transparent"
-              onClick={() =>
-                setFormData({
-                  fecha: getCurrentDate(),
-                  id_cliente: "",
-                  estatus: "En proceso",
-                  id_tecnico: "",
-                  descripcion: "",
-                })
-              }
+              onClick={handleReset}
               disabled={isLoading}
             >
               Limpiar Formulario
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="flex-1 bg-blue-600 hover:bg-blue-700"
-              disabled={isLoading}
+              disabled={isLoading || !isFormComplete}
             >
               {isLoading ? (
                 <>

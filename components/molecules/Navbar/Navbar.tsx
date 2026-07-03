@@ -98,11 +98,12 @@ export const Navbar = () => {
         </nav>
       </aside>
 
-      {/* Mobile Menu Button */}
+      {/* Mobile Menu Button (único control de apertura/cierre en mobile) */}
       <button 
         className={s.mobileMenuButton}
         onClick={toggleMobileMenu}
-        aria-label="Toggle menu"
+        aria-label={isMobileMenuOpen ? "Cerrar menú" : "Abrir menú"}
+        aria-expanded={isMobileMenuOpen}
       >
         <i className={`fa-solid ${isMobileMenuOpen ? 'fa-times' : 'fa-bars'} text-xl`}></i>
       </button>
@@ -117,13 +118,6 @@ export const Navbar = () => {
         <nav className={s.nav}>
           <div className={s.brand}>
             <span className={s.brandText}>REGATELECOM</span>
-            <button 
-              onClick={closeMobileMenu}
-              className={s.closeButton}
-              aria-label="Close menu"
-            >
-              <i className="fa-solid fa-times text-xl"></i>
-            </button>
           </div>
           <div className={s.menuItems}>
             {

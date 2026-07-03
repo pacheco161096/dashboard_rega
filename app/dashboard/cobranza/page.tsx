@@ -40,11 +40,13 @@ import {
 import { getTodayISO } from "@/lib/api/config";
 import { cajaService } from "@/lib/services";
 import { ItemCarrito, GastoFormData } from "@/types/cobranza";
+import { useToast } from "@/hooks/use-toast";
 
 // Re-exportar tipos para compatibilidad
 export type ItemCarInt = ItemCarrito;
 
 function Cobranza() {
+  const { toast } = useToast();
   // Estados de UI
   const [openVenta, setOpenVenta] = useState(false);
   const [openGasto, setOpenGasto] = useState(false);
@@ -176,7 +178,7 @@ function Cobranza() {
 
   const openDrawerVenta = useCallback(() => {
     setOpenVenta(true);
-    setTabNew(TABS_VENTA.PRODUCTO);
+    setTabNew(TABS_VENTA.PAQUETE);
   }, []);
 
   const closeDrawerVenta = useCallback(() => {
@@ -218,6 +220,11 @@ function Cobranza() {
 
     // Validar referencia si es requerida
     if (requiereReferencia(paymentMethod) && !paymentReference.trim()) {
+      toast({
+        title: "Referencia requerida",
+        description: "Ingresa la referencia del pago para continuar.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -250,6 +257,7 @@ function Cobranza() {
     refrescarVentas,
     limpiarCarrito,
     limpiarCliente,
+    toast,
   ]);
 
   const abrirCaja = async () => {
@@ -291,34 +299,6 @@ function Cobranza() {
       {/* Header */}
       <div className={s["Cobranza-header"]}>
         <div className={s["Cobranza-cashInit"]}>
-          <div className={s["Cobranza-search"]}>
-            <div className="w-full sm:w-[200px] md:w-[250px] lg:w-[300px] h-10 border border-gray-300 rounded-lg flex p-2">
-              <input
-                type="number"
-                pattern="[0-9]*"
-                name="userId"
-                required
-                className="bg-transparent border-none outline-none w-[90%] h-full  [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-moz-appearance:textfield]"
-                placeholder="Buscar Producto"
-              />
-              <button>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="currentColor"
-                  className="size-4"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
-                  />
-                </svg>
-              </button>
-            </div>
-          </div>
           <button
             className={`${
               !isOpenCaja ? s["Cobranza-openCaja"] : s["Cobranza-closeCaja"]
@@ -491,62 +471,12 @@ function Cobranza() {
             </div>
             <div>
               <nav className="flex border-gray-700 border rounded-lg h-11 items-center justify-center relative bg-gray-700/50">
-                <div
-                  className={`w-1/2 text-center cursor-pointer relative border-r border-gray-700 h-full flex items-center justify-center transition-colors ${
-                    tab === TABS_VENTA.PRODUCTO
-                      ? "text-white bg-gray-600 font-medium"
-                      : "text-gray-400 hover:text-gray-300"
-                  }`}
-                  onClick={() => setTabNew(TABS_VENTA.PRODUCTO)}
-                >
-                  Producto
-                </div>
-                <div
-                  className={`w-1/2 text-center cursor-pointer relative h-full flex items-center justify-center transition-colors ${
-                    tab === TABS_VENTA.PAQUETE
-                      ? "text-white bg-gray-600 font-medium"
-                      : "text-gray-400 hover:text-gray-300"
-                  }`}
-                  onClick={() => setTabNew(TABS_VENTA.PAQUETE)}
-                >
+                <div className="w-full text-center relative h-full flex items-center justify-center text-white bg-gray-600 font-medium">
                   Paquete
                 </div>
               </nav>
               <div>
-                {tab === TABS_VENTA.PRODUCTO ? (
-                  <div className="mt-4">
-                    <label className="block mb-2 text-gray-300 text-sm font-medium">
-                      Buscar Producto
-                    </label>
-                    <div className="w-full h-11 border border-gray-700 rounded-lg flex items-center p-3 bg-gray-700/30 focus-within:border-gray-600 focus-within:bg-gray-700/50 transition-colors">
-                      <input
-                        type="number"
-                        pattern="[0-9]*"
-                        placeholder="ID del producto"
-                        className="bg-transparent border-none outline-none w-full h-full text-white placeholder-gray-500 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-moz-appearance:textfield]"
-                      />
-                      <button
-                        type="button"
-                        className="text-gray-400 hover:text-white transition-colors ml-2"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          strokeWidth={1.5}
-                          stroke="currentColor"
-                          className="size-5"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                ) : (
+                {tab === TABS_VENTA.PAQUETE && (
                   <div className="flex flex-col mt-4">
                     <form
                       onSubmit={(e) => {

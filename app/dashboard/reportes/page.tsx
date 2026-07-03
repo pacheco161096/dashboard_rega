@@ -19,7 +19,14 @@ export default function Reportes() {
   const [currentView, setCurrentView] = useState<ViewType>("dashboard")
   const [clienteId, setClienteId] = useState<string>("")
   const { isLoading, error, success, submitTicket } = useTicketForm()
-  const { total, enProceso, finalizados, isLoading: statsLoading, refreshStats } = useTicketStats()
+  const {
+    total,
+    enProceso,
+    finalizados,
+    isLoading: statsLoading,
+    error: statsError,
+    refreshStats,
+  } = useTicketStats()
   const permissions = getUserPermissions()
 
   // Memoizar handlers de cambio de vista
@@ -172,6 +179,12 @@ export default function Reportes() {
                 </Card>
               </div>
 
+              {statsError && (
+                <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  No se pudieron cargar las estadísticas: {statsError}
+                </div>
+              )}
+
               {/* Stats Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                 <Card className="bg-blue-50 border-blue-200">
@@ -241,7 +254,7 @@ export default function Reportes() {
           </div>
         )
     }
-  }, [currentView, error, isLoading, handleSubmit, handleBackToDashboard, handleViewChange, total, enProceso, finalizados, statsLoading, clienteId, refreshStats, permissions])
+  }, [currentView, error, isLoading, handleSubmit, handleBackToDashboard, handleViewChange, total, enProceso, finalizados, statsLoading, statsError, clienteId, refreshStats, permissions])
 
   return <div>{renderedView}</div>
 }

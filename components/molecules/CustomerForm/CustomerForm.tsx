@@ -1,9 +1,10 @@
 "use client";
 
-import { FC, useState, useCallback, useEffect } from "react";
+import { FC, useState, useCallback, useEffect, useMemo } from "react";
 import s from "./CustomerForm.module.css";
 import { Button } from "@/components/ui/button";
-import axios from "axios";
+import { businessApi, handleApiError } from "@/lib/api/config";
+import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
   DialogContent,
@@ -16,6 +17,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { User } from "@/app/dashboard/customers/page";
+import {
+  firstFieldErrorMessage,
+  hasFieldErrors,
+  validateCustomerForm,
+  type FieldErrors,
+} from "@/lib/utils/formValidation";
 
 export interface CustomerFormProps {
   open: boolean;
@@ -214,6 +221,13 @@ const dataInput = [
   },
 ];
 
+function generateTempPassword(): string {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID().replace(/-/g, "").slice(0, 12);
+  }
+  return `tmp${Date.now().toString(36)}`;
+}
+
 export const CustomerForm: FC<CustomerFormProps> = ({
   open,
   onOpenChange,
@@ -237,7 +251,14 @@ export const CustomerForm: FC<CustomerFormProps> = ({
     return initialUserData;
   });
   const [isLoading, setIsLoading] = useState(false);
-  // Cargar datos del usuario cuando estamos en modo edición
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const { toast } = useToast();
+
+  const isFormComplete = useMemo(
+    () => !hasFieldErrors(validateCustomerForm(dataUser)),
+    [dataUser]
+  );
+
   useEffect(() => {
     if (
       mode === "edit" &&
@@ -245,7 +266,6 @@ export const CustomerForm: FC<CustomerFormProps> = ({
       Array.isArray(userData) &&
       userData.length > 0
     ) {
-      // Convertir todos los valores null/undefined a cadenas vacías
       const userDataRaw = userData[0] as unknown as Record<
         string,
         string | null | undefined
@@ -258,6 +278,7 @@ export const CustomerForm: FC<CustomerFormProps> = ({
     } else {
       setDataUser(initialUserData);
     }
+    setErrors({});
   }, [mode, userData, open]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -267,35 +288,50 @@ export const CustomerForm: FC<CustomerFormProps> = ({
       [name]: value,
       ...(name === "email" ? { username: value } : {}),
     }));
+    setErrors((prev) => {
+      if (!prev[name]) return prev;
+      const next = { ...prev };
+      delete next[name];
+      return next;
+    });
   };
 
   const handleSubmit = useCallback(
     async (event: React.FormEvent) => {
       event.preventDefault();
+
+      const validationErrors = validateCustomerForm(dataUser);
+      if (hasFieldErrors(validationErrors)) {
+        setErrors(validationErrors);
+        toast({
+          title: "Formulario incompleto",
+          description: firstFieldErrorMessage(validationErrors),
+          variant: "destructive",
+        });
+        return;
+      }
+
       setIsLoading(true);
 
       try {
         if (mode === "create") {
-          // Crear nuevo usuario
+          const tempPassword = generateTempPassword();
           const payload = {
             ...dataUser,
-            password: "123456789",
+            password: tempPassword,
             confirmed: true,
             blocked: false,
             estatus_servicio: true,
             role: "2",
           };
 
-          await axios.post(
-            "https://monkfish-app-2et8k.ondigitalocean.app/api/auth/local/register",
-            payload
-          );
+          await businessApi.post("/auth/local/register", payload);
+          toast({
+            title: "Cliente creado",
+            description: `El cliente se registró correctamente. Contraseña temporal: ${tempPassword}`,
+          });
         } else {
-          // Actualizar usuario existente
-          // Campos requeridos que siempre deben incluirse
           const requiredFields = ["nombre", "apellido", "email", "username"];
-
-          // Campos opcionales editables
           const optionalFields = [
             "celular",
             "calle",
@@ -318,10 +354,8 @@ export const CustomerForm: FC<CustomerFormProps> = ({
             "listado_region",
           ];
 
-          // Construir el payload
           const payload: Record<string, string> = {};
 
-          // Incluir campos requeridos (siempre, incluso si están vacíos)
           requiredFields.forEach((field) => {
             const value = dataUser[field];
             if (value !== undefined && value !== null) {
@@ -329,30 +363,39 @@ export const CustomerForm: FC<CustomerFormProps> = ({
             }
           });
 
-          // Incluir campos opcionales solo si tienen valor
           optionalFields.forEach((field) => {
             const value = dataUser[field];
             if (value !== undefined && value !== null && value !== "") {
               payload[field] = value;
             }
           });
-          await axios.put(
-            `https://monkfish-app-2et8k.ondigitalocean.app/api/users/${userId}`,
-            payload
-          );
+
+          await businessApi.put(`/users/${userId}`, payload);
+          toast({
+            title: "Cliente actualizado",
+            description: "Los datos se guardaron correctamente",
+          });
         }
 
+        setErrors({});
         onOpenChange(false);
       } catch (error) {
         console.error(
           `Error al ${mode === "create" ? "crear" : "actualizar"} usuario:`,
           error
         );
+        toast({
+          title: mode === "create" ? "Error al crear cliente" : "Error al actualizar cliente",
+          description:
+            handleApiError(error).message ||
+            `No se pudo ${mode === "create" ? "crear" : "actualizar"} el cliente`,
+          variant: "destructive",
+        });
       } finally {
         setIsLoading(false);
       }
     },
-    [dataUser, onOpenChange, mode, userId]
+    [dataUser, onOpenChange, mode, userId, toast]
   );
 
   const renderFields = (section: string) =>
@@ -360,11 +403,13 @@ export const CustomerForm: FC<CustomerFormProps> = ({
       .filter((item) => item.section === section)
       .map((item) => {
         const fieldValue = dataUser[item.name as keyof typeof dataUser];
-        // Convertir null o undefined a cadena vacía para evitar errores de React
         const safeValue = fieldValue ?? "";
         return (
           <div className="space-y-2" key={item.name}>
-            <Label htmlFor={item.name}>{item.placeholder}</Label>
+            <Label htmlFor={item.name}>
+              {item.placeholder}
+              {item.required && <span className="text-red-500 ml-1">*</span>}
+            </Label>
             <Input
               id={item.name}
               name={item.name}
@@ -372,8 +417,13 @@ export const CustomerForm: FC<CustomerFormProps> = ({
               type={item.type}
               value={safeValue as string}
               onChange={handleChange}
-              required={item.required}
+              className={errors[item.name] ? "border-red-500" : ""}
+              disabled={isLoading}
+              aria-invalid={Boolean(errors[item.name])}
             />
+            {errors[item.name] && (
+              <p className="text-xs text-red-600">{errors[item.name]}</p>
+            )}
           </div>
         );
       });
@@ -393,7 +443,7 @@ export const CustomerForm: FC<CustomerFormProps> = ({
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} noValidate>
             <Tabs defaultValue="personales" className="w-full">
               <TabsList className="grid w-full grid-cols-4 mb-4">
                 <TabsTrigger value="personales">Datos Personales</TabsTrigger>
@@ -431,7 +481,7 @@ export const CustomerForm: FC<CustomerFormProps> = ({
               <Button
                 type="submit"
                 className="bg-blue-600 hover:bg-blue-700"
-                disabled={isLoading}
+                disabled={isLoading || !isFormComplete}
               >
                 {isLoading
                   ? "Procesando..."

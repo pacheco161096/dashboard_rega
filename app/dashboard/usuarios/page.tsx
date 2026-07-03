@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react"
 import dynamic from "next/dynamic"
-import axios from 'axios'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -14,8 +13,16 @@ import { Loader2 } from "lucide-react"
 import { UsuariosService } from "@/lib/services/usuariosService"
 import { UsuarioRequest, UsuarioData } from "@/types/usuario"
 import { useToast } from "@/hooks/use-toast"
-import { getAllRolesForSelect, ROLES_ARRAY } from "@/lib/roles"
+import { getAllRolesForSelect, getRoleDisplayName, resolveRoleId, ROLES_ARRAY } from "@/lib/roles"
 import type { RoleSelectOption } from "@/types/rolesPermissions"
+import { handleApiError } from "@/lib/api/config"
+import { ConfirmActionModal } from "@/components/molecules/ConfirmActionModal/ConfirmActionModal"
+import {
+  firstFieldErrorMessage,
+  hasFieldErrors,
+  validateUsuarioForm,
+  type FieldErrors,
+} from "@/lib/utils/formValidation"
 
 const RolesPermissionsManager = dynamic(
   () =>
@@ -44,8 +51,6 @@ interface Usuario {
   }
 }
 
-const API_BASE_URL = 'https://monkfish-app-2et8k.ondigitalocean.app/api'
-
 export default function Usuarios() {
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState("usuarios")
@@ -62,6 +67,7 @@ export default function Usuarios() {
   const [selectedUsuario, setSelectedUsuario] = useState<Usuario | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [usuarioToDelete, setUsuarioToDelete] = useState<Usuario | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [showFormModal, setShowFormModal] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   
@@ -72,6 +78,7 @@ export default function Usuarios() {
     password: "",
     role: "",
   })
+  const [formErrors, setFormErrors] = useState<FieldErrors>({})
 
   const refreshAvailableRoles = useCallback(() => {
     setAvailableRoles(getAllRolesForSelect())
@@ -85,39 +92,41 @@ export default function Usuarios() {
   const fetchUsuarios = useCallback(async () => {
     try {
       setLoading(true)
-      const response = await axios.get(`${API_BASE_URL}/usuarios?populate=role`)
-      if (response.data?.data) {
-        const usuariosData = response.data.data.map((item: { id: number; attributes: { nombre?: string; usuario?: string; email?: string; rol?: string } }) => {
-          // Buscar el rol en ROLES_ARRAY basándose en el nombre del rol
-          const rolEncontrado = availableRoles.find(
-            (r) => r.name === item.attributes.rol || r.value === item.attributes.rol
-          )
-          
-          return {
-            id: item.id,
-            nombre: item.attributes.nombre || "",
-            username: item.attributes.usuario || "",
-            email: item.attributes.email || "",
-            role: {
-              id: rolEncontrado?.id || 0,
-              name: item.attributes.rol || "Sin rol",
-              value: rolEncontrado?.value || "",
-            }
-          }
-        })
-        setUsuarios(usuariosData)
-      }
+      const data = await UsuariosService.obtenerUsuarios()
+      const usuariosData = data.map((item) => {
+        const attributes = item.attributes as {
+          nombre?: string
+          usuario?: string
+          email?: string
+          rol?: string
+        }
+        const roleId = resolveRoleId(attributes.rol)
+        const roleName = attributes.rol || getRoleDisplayName(roleId)
+
+        return {
+          id: item.id,
+          nombre: attributes.nombre || "",
+          username: attributes.usuario || "",
+          email: attributes.email || "",
+          role: {
+            id: roleId || 0,
+            name: roleName,
+            value: roleId || "",
+          },
+        }
+      })
+      setUsuarios(usuariosData)
     } catch (error) {
       console.error("Error al cargar usuarios:", error)
       toast({
         title: "Error",
-        description: "No se pudieron cargar los usuarios",
+        description: handleApiError(error).message || "No se pudieron cargar los usuarios",
         variant: "destructive",
       })
     } finally {
       setLoading(false)
     }
-  }, [toast, availableRoles])
+  }, [toast])
 
   useEffect(() => {
     fetchUsuarios()
@@ -139,14 +148,6 @@ export default function Usuarios() {
     })
   }, [usuarios, searchQuery])
 
-  // Manejar cambios en el formulario
-  const handleInputChange = useCallback((field: string, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }))
-  }, [])
-
   // Limpiar formulario
   const resetForm = useCallback(() => {
     setFormData({
@@ -156,8 +157,19 @@ export default function Usuarios() {
       password: "",
       role: "",
     })
+    setFormErrors({})
     setIsEditing(false)
     setSelectedUsuario(null)
+  }, [])
+
+  const handleInputChange = useCallback((field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
+    setFormErrors((prev) => {
+      if (!prev[field]) return prev
+      const next = { ...prev }
+      delete next[field]
+      return next
+    })
   }, [])
 
   // Abrir modal para crear usuario (solo en pantallas pequeñas)
@@ -194,23 +206,34 @@ export default function Usuarios() {
   // Crear usuario
   const handleCreate = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
+
+    const validationErrors = validateUsuarioForm(formData, { isEditing: false })
+    if (hasFieldErrors(validationErrors)) {
+      setFormErrors(validationErrors)
+      toast({
+        title: "Formulario incompleto",
+        description: firstFieldErrorMessage(validationErrors),
+        variant: "destructive",
+      })
+      return
+    }
     
     try {
       const payload = {
         data: {
-          nombre: formData.nombre,
-          usuario: formData.username,
-          email: formData.email,
+          nombre: formData.nombre.trim(),
+          usuario: formData.username.trim(),
+          email: formData.email.trim(),
           contrasena: formData.password,
           rol: availableRoles.find((rol) => rol.value === formData.role)?.name,
         }
       }
 
-      await axios.post(`${API_BASE_URL}/usuarios`, payload)
+      await UsuariosService.crearUsuario(payload)
       
       toast({
-        title: "Éxito",
-        description: "Usuario creado correctamente",
+        title: "Usuario creado",
+        description: "El usuario se registró correctamente",
       })
       
       resetForm()
@@ -219,8 +242,8 @@ export default function Usuarios() {
     } catch (error: unknown) {
       console.error("Error al crear usuario:", error)
       toast({
-        title: "Error",
-        description: (error as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message || "No se pudo crear el usuario",
+        title: "Error al crear usuario",
+        description: handleApiError(error).message || "No se pudo crear el usuario",
         variant: "destructive",
       })
     }
@@ -232,20 +255,28 @@ export default function Usuarios() {
     
     if (!selectedUsuario) return
 
+    const validationErrors = validateUsuarioForm(formData, { isEditing: true })
+    if (hasFieldErrors(validationErrors)) {
+      setFormErrors(validationErrors)
+      toast({
+        title: "Formulario incompleto",
+        description: firstFieldErrorMessage(validationErrors),
+        variant: "destructive",
+      })
+      return
+    }
+
     try {
-      // Construir el payload con los datos básicos
       const payloadData: UsuarioData = {
-        nombre: formData.nombre,
-        usuario: formData.username,
-        email: formData.email,
+        nombre: formData.nombre.trim(),
+        usuario: formData.username.trim(),
+        email: formData.email.trim(),
       }
 
-      // Solo incluir password si se proporcionó uno nuevo
       if (formData.password) {
         payloadData.contrasena = formData.password
       }
 
-      // Incluir role si se seleccionó
       if (formData.role) {
         payloadData.rol = availableRoles.find((rol) => rol.value === formData.role)?.name
       }
@@ -257,8 +288,8 @@ export default function Usuarios() {
       await UsuariosService.actualizarUsuario(selectedUsuario.id, payload)
       
       toast({
-        title: "Éxito",
-        description: "Usuario actualizado correctamente",
+        title: "Usuario actualizado",
+        description: "Los datos se guardaron correctamente",
       })
       
       resetForm()
@@ -267,8 +298,8 @@ export default function Usuarios() {
     } catch (error: unknown) {
       console.error("Error al actualizar usuario:", error)
       toast({
-        title: "Error",
-        description: (error as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message || "No se pudo actualizar el usuario",
+        title: "Error al actualizar usuario",
+        description: handleApiError(error).message || "No se pudo actualizar el usuario",
         variant: "destructive",
       })
     }
@@ -278,8 +309,9 @@ export default function Usuarios() {
   const handleDelete = async () => {
     if (!usuarioToDelete) return
 
+    setIsDeleting(true)
     try {
-      await axios.delete(`${API_BASE_URL}/usuarios/${usuarioToDelete.id}`)
+      await UsuariosService.eliminarUsuario(usuarioToDelete.id)
       
       toast({
         title: "Éxito",
@@ -293,9 +325,11 @@ export default function Usuarios() {
       console.error("Error al eliminar usuario:", error)
       toast({
         title: "Error",
-        description: (error as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message || "No se pudo eliminar el usuario",
+        description: handleApiError(error).message || "No se pudo eliminar el usuario",
         variant: "destructive",
       })
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -312,47 +346,59 @@ export default function Usuarios() {
 
 
   // Componente del formulario - Las funciones están memorizadas para evitar pérdida de foco
-  const renderForm = () => (
-    <form onSubmit={isEditing ? handleUpdate : handleCreate} className="space-y-4">
+  const renderForm = () => {
+    const isFormComplete = !hasFieldErrors(
+      validateUsuarioForm(formData, { isEditing })
+    )
+
+    return (
+    <form onSubmit={isEditing ? handleUpdate : handleCreate} className="space-y-4" noValidate>
       <div className="space-y-2">
-        <Label htmlFor="nombre">Nombre</Label>
+        <Label htmlFor="nombre">Nombre <span className="text-red-500">*</span></Label>
         <Input
           id="nombre"
           type="text"
           placeholder="Ingrese el nombre"
           value={formData.nombre}
           onChange={(e) => handleInputChange("nombre", e.target.value)}
-          required
+          className={formErrors.nombre ? "border-red-500" : ""}
+          aria-invalid={Boolean(formErrors.nombre)}
         />
+        {formErrors.nombre && <p className="text-xs text-red-600">{formErrors.nombre}</p>}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="username">Usuario</Label>
+        <Label htmlFor="username">Usuario <span className="text-red-500">*</span></Label>
         <Input
           id="username"
           type="text"
           placeholder="Ingrese el usuario"
           value={formData.username}
           onChange={(e) => handleInputChange("username", e.target.value)}
-          required
+          className={formErrors.username ? "border-red-500" : ""}
+          aria-invalid={Boolean(formErrors.username)}
         />
+        {formErrors.username && <p className="text-xs text-red-600">{formErrors.username}</p>}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
         <Input
           id="email"
           type="email"
           placeholder="Ingrese el email"
           value={formData.email}
           onChange={(e) => handleInputChange("email", e.target.value)}
-          required
+          className={formErrors.email ? "border-red-500" : ""}
+          aria-invalid={Boolean(formErrors.email)}
         />
+        {formErrors.email && <p className="text-xs text-red-600">{formErrors.email}</p>}
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="password">
-          Contraseña {isEditing && <span className="text-xs text-gray-500">(dejar vacío para no cambiar)</span>}
+          Contraseña {!isEditing && <span className="text-red-500">*</span>}
+          {isEditing && <span className="text-xs text-gray-500"> (dejar vacío para no cambiar)</span>}
         </Label>
         <Input
           id="password"
@@ -360,19 +406,20 @@ export default function Usuarios() {
           placeholder={isEditing ? "Nueva contraseña (opcional)" : "Ingrese la contraseña"}
           value={formData.password}
           onChange={(e) => handleInputChange("password", e.target.value)}
-          required={!isEditing}
+          className={formErrors.password ? "border-red-500" : ""}
           autoComplete="current-password"
+          aria-invalid={Boolean(formErrors.password)}
         />
+        {formErrors.password && <p className="text-xs text-red-600">{formErrors.password}</p>}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="role">Rol</Label>
+        <Label htmlFor="role">Rol <span className="text-red-500">*</span></Label>
         <Select
           value={formData.role}
           onValueChange={(value) => handleInputChange("role", value)}
-          required
         >
-          <SelectTrigger>
+          <SelectTrigger className={formErrors.role ? "border-red-500" : ""}>
             <SelectValue placeholder="Seleccione un rol" />
           </SelectTrigger>
           <SelectContent>
@@ -383,6 +430,7 @@ export default function Usuarios() {
             ))}
           </SelectContent>
         </Select>
+        {formErrors.role && <p className="text-xs text-red-600">{formErrors.role}</p>}
       </div>
 
       <div className="flex gap-3 pt-4">
@@ -398,13 +446,14 @@ export default function Usuarios() {
         <Button
           type="submit"
           className="flex-1 bg-blue-600 hover:bg-blue-700"
-          disabled={loading}
+          disabled={loading || !isFormComplete}
         >
           {isEditing ? "Actualizar" : "Crear"}
         </Button>
       </div>
     </form>
-  )
+    )
+  }
 
   return (
     <div className="w-full p-6">
@@ -596,35 +645,25 @@ export default function Usuarios() {
         </Dialog>
       </div>
 
-      {/* Modal de confirmación para eliminar */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50 z-50 p-4">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-sm text-center">
-            <h2 className="text-lg font-semibold text-gray-800 mb-2">¿Eliminar usuario?</h2>
-            <p className="text-gray-600 text-sm mb-4">
-              ¿Estás seguro de que deseas eliminar al usuario <strong>{usuarioToDelete?.nombre}</strong>? Esta acción no se puede deshacer.
-            </p>
-            <div className="flex gap-3 justify-center">
-              <Button
-                variant="outline"
-                className="px-4 py-2"
-                onClick={() => {
-                  setShowDeleteModal(false)
-                  setUsuarioToDelete(null)
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white"
-                onClick={handleDelete}
-              >
-                Confirmar
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmActionModal
+        open={showDeleteModal && !!usuarioToDelete}
+        title="¿Eliminar usuario?"
+        description={
+          <>
+            ¿Estás seguro de que deseas eliminar al usuario{" "}
+            <strong>{usuarioToDelete?.nombre}</strong>? Esta acción no se puede deshacer.
+          </>
+        }
+        confirmLabel="Eliminar"
+        isLoading={isDeleting}
+        onConfirm={handleDelete}
+        onCancel={() => {
+          if (!isDeleting) {
+            setShowDeleteModal(false)
+            setUsuarioToDelete(null)
+          }
+        }}
+      />
         </TabsContent>
 
         <TabsContent value="roles" className="mt-0">

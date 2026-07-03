@@ -1,15 +1,26 @@
 .header {
-    @apply container flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-3 mt-4 sm:mt-6 mb-4 sm:mb-6 px-0;
+    @apply container flex flex-col gap-3 mt-4 sm:mt-6 mb-4 sm:mb-6 px-0 w-full;
+    /* Desktop: botón + buscador + filtros en una sola fila */
+    @apply lg:flex-row lg:items-center lg:gap-3;
 }
 
 .headerActions {
-    @apply flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1 min-w-0;
+    @apply flex flex-col gap-3 w-full min-w-0;
+    /* Desktop: buscador y filtros en la misma fila, ocupando el resto del espacio */
+    @apply lg:flex-row lg:items-center lg:flex-1 lg:min-w-0;
 }
 
 .searchWrapper {
-    @apply flex-1 min-w-0;
+    @apply w-full min-w-0;
+    @apply lg:flex-1 lg:min-w-[200px];
 }
 
 .filters {
-    @apply flex flex-wrap items-center gap-2 shrink-0;
+    @apply flex flex-wrap items-center gap-2 w-full;
+    @apply lg:w-auto lg:flex-shrink-0;
+}
+
+.newClientButton {
+    @apply flex items-center justify-center gap-2 w-full;
+    @apply lg:w-auto lg:flex-shrink-0 whitespace-nowrap;
 }

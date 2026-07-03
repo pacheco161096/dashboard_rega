@@ -1,9 +1,10 @@
 "use client";
 
-import { FC, useState, useCallback } from "react";
+import { FC, useState, useCallback, useMemo } from "react";
 import s from "./CreateCustomer.module.css";
 import { Button } from "@/components/ui/button";
-import axios from "axios";
+import { businessApi, handleApiError } from "@/lib/api/config";
+import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +16,12 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  firstFieldErrorMessage,
+  hasFieldErrors,
+  validateCustomerForm,
+  type FieldErrors,
+} from "@/lib/utils/formValidation";
 
 export interface CreateCustomerProps {
   open: boolean;
@@ -45,10 +52,10 @@ const initialUserData = {
   ip_address: "",
   tipo_servicio: "",
   id_mikrotik: "",
+  listado_region: "",
 };
 
 const dataInput = [
-  // Datos Personales
   { name: "nombre", required: true, placeholder: "Nombre", type: "text", section: "personales" },
   { name: "apellido", required: true, placeholder: "Apellido", type: "text", section: "personales" },
   { name: "email", required: true, placeholder: "Correo", type: "email", section: "personales" },
@@ -62,89 +69,146 @@ const dataInput = [
   { name: "localidad", required: false, placeholder: "Localidad", type: "text", section: "direccion" },
   { name: "estado", required: false, placeholder: "Estado", type: "text", section: "direccion" },
   { name: "pais", required: false, placeholder: "País", type: "text", section: "direccion" },
-
-  // Datos Fiscales
   { name: "rfc", required: false, placeholder: "R.F.C", type: "text", section: "fiscales" },
   { name: "curp", required: false, placeholder: "CURP", type: "text", section: "fiscales" },
   { name: "razon_social", required: false, placeholder: "Razón Social", type: "text", section: "fiscales" },
   { name: "regimen_fiscal", required: false, placeholder: "Régimen Fiscal", type: "text", section: "fiscales" },
   { name: "cfdi", required: false, placeholder: "Uso CFDI", type: "text", section: "fiscales" },
-
-  // Servicio
   { name: "tipo_servicio_paquete", required: false, placeholder: "Paquete", type: "text", section: "servicio" },
   { name: "ip_address", required: false, placeholder: "IP", type: "text", section: "servicio" },
   { name: "id_mikrotik", required: false, placeholder: "Mrikotik", type: "text", section: "servicio" },
   { name: "listado_region", required: false, placeholder: "listado region", type: "text", section: "servicio" },
-
 ];
+
+function generateTempPassword(): string {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID().replace(/-/g, "").slice(0, 12);
+  }
+  return `tmp${Date.now().toString(36)}`;
+}
 
 export const CreateCustomer: FC<CreateCustomerProps> = ({ open, onOpenChange }) => {
   const [dataUser, setDataUser] = useState(initialUserData);
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+
+  const isFormComplete = useMemo(
+    () => !hasFieldErrors(validateCustomerForm(dataUser)),
+    [dataUser]
+  );
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setDataUser(prev => ({
+    setDataUser((prev) => ({
       ...prev,
       [name]: value,
-      ...(name === "email" ? { username: value } : {})
+      ...(name === "email" ? { username: value } : {}),
     }));
+    setErrors((prev) => {
+      if (!prev[name]) return prev;
+      const next = { ...prev };
+      delete next[name];
+      return next;
+    });
+  };
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      setDataUser(initialUserData);
+      setErrors({});
+      setIsLoading(false);
+    }
+    onOpenChange(nextOpen);
   };
 
   const handleSubmit = useCallback(
     async (event: React.FormEvent) => {
       event.preventDefault();
 
-      const payload = {...dataUser,
-        ...({  password: "123456789",
-          confirmed: true,
-          blocked: false,
-          estatus_servicio: true,
-        role: "2",})
-        }
+      const validationErrors = validateCustomerForm(dataUser);
+      if (hasFieldErrors(validationErrors)) {
+        setErrors(validationErrors);
+        toast({
+          title: "Formulario incompleto",
+          description: firstFieldErrorMessage(validationErrors),
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setIsLoading(true);
+      const tempPassword = generateTempPassword();
+      const payload = {
+        ...dataUser,
+        password: tempPassword,
+        confirmed: true,
+        blocked: false,
+        estatus_servicio: true,
+        role: "2",
+      };
+
       try {
-        await axios.post(
-          "https://monkfish-app-2et8k.ondigitalocean.app/api/auth/local/register",
-          payload
-        );
-        console.log("Usuario creado con éxito.");
+        await businessApi.post("/auth/local/register", payload);
+        toast({
+          title: "Cliente creado",
+          description: `El cliente se registró correctamente. Contraseña temporal: ${tempPassword}`,
+        });
+        setDataUser(initialUserData);
+        setErrors({});
         onOpenChange(false);
       } catch (error) {
         console.error("Error al crear usuario:", error);
+        toast({
+          title: "Error al crear cliente",
+          description: handleApiError(error).message || "No se pudo crear el cliente",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
       }
     },
-    [dataUser, onOpenChange]
+    [dataUser, onOpenChange, toast]
   );
 
   const renderFields = (section: string) =>
     dataInput
-      .filter(item => item.section === section)
-      .map(item => (
+      .filter((item) => item.section === section)
+      .map((item) => (
         <div className="space-y-2" key={item.name}>
-          <Label htmlFor={item.name}>{item.placeholder}</Label>
+          <Label htmlFor={item.name}>
+            {item.placeholder}
+            {item.required && <span className="text-red-500 ml-1">*</span>}
+          </Label>
           <Input
             id={item.name}
             name={item.name}
             placeholder={item.placeholder}
             type={item.type}
-            value={dataUser[item.name as keyof typeof dataUser]}
+            value={dataUser[item.name as keyof typeof dataUser] ?? ""}
             onChange={handleChange}
-            required={item.required}
+            className={errors[item.name] ? "border-red-500" : ""}
+            disabled={isLoading}
+            aria-invalid={Boolean(errors[item.name])}
           />
+          {errors[item.name] && (
+            <p className="text-xs text-red-600">{errors[item.name]}</p>
+          )}
         </div>
       ));
 
   return (
     <div className={s.container}>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Nuevo Cliente</DialogTitle>
             <DialogDescription>
-              Complete la información para registrar un nuevo cliente.
+              Complete la información obligatoria para registrar un nuevo cliente.
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} noValidate>
             <Tabs defaultValue="personales" className="w-full">
               <TabsList className="grid w-full grid-cols-4 mb-4">
                 <TabsTrigger value="personales">Datos Personales</TabsTrigger>
@@ -168,11 +232,20 @@ export const CreateCustomer: FC<CreateCustomerProps> = ({ open, onOpenChange }) 
             </Tabs>
 
             <DialogFooter className="mt-6">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleOpenChange(false)}
+                disabled={isLoading}
+              >
                 Cancelar
               </Button>
-              <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-                Guardar
+              <Button
+                type="submit"
+                className="bg-blue-600 hover:bg-blue-700"
+                disabled={isLoading || !isFormComplete}
+              >
+                {isLoading ? "Guardando..." : "Guardar"}
               </Button>
             </DialogFooter>
           </form>

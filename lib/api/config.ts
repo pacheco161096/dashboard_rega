@@ -150,14 +150,15 @@ const requestLogger = (
  */
 const responseLogger = (response: AxiosResponse) => {
   if (process.env.NODE_ENV === "development") {
+    const data = response.data;
+    const summary = Array.isArray(data)
+      ? { items: data.length }
+      : data && typeof data === "object" && Array.isArray((data as { data?: unknown }).data)
+        ? { items: (data as { data: unknown[] }).data.length, meta: (data as { meta?: unknown }).meta }
+        : { data };
     console.log(
-      `[API Response] ${response.config.method?.toUpperCase()} ${
-        response.config.url
-      }`,
-      {
-        status: response.status,
-        data: response.data,
-      }
+      `[API Response] ${response.config.method?.toUpperCase()} ${response.config.url}`,
+      { status: response.status, ...summary }
     );
   }
   return response;
