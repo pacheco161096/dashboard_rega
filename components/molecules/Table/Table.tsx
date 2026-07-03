@@ -3,7 +3,6 @@
 import { FC } from "react"
 import { CreditCardIcon, PencilIcon } from "@primer/octicons-react"
 import { FileText } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Table as ShadTable,
@@ -16,6 +15,7 @@ import {
 
 import { User } from "@/app/dashboard/customers/page"
 import { getUserPermissions } from "@/lib/roles"
+import { ServiceStatusBadge } from "@/components/molecules/ServiceStatusBadge/ServiceStatusBadge"
 
 interface TableProps {
   data: User[] | undefined
@@ -54,16 +54,7 @@ export const Table: FC<TableProps> = ({ data, handleUpdateCliente, handleRegiste
                 <TableCell className="text-gray-600">{user.localidad || 'N/A'}</TableCell>
                 <TableCell className="text-gray-600">{user.tipo_servicio_paquete || 'N/A'}</TableCell>
                 <TableCell>
-                  <Badge
-                    variant={user.estatus_servicio ? "outline" : "destructive"}
-                    className={
-                      user.estatus_servicio
-                        ? "bg-green-100 text-green-800 hover:bg-green-100 border-green-200 font-medium"
-                        : "bg-red-700 text-white hover:bg-red-800 font-medium"
-                    }
-                  >
-                    {user.estatus_servicio ? "Activo" : "Suspendido"}
-                  </Badge>
+                  <ServiceStatusBadge customer={user} />
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center justify-center gap-2">
@@ -126,16 +117,7 @@ export const Table: FC<TableProps> = ({ data, handleUpdateCliente, handleRegiste
                   </p>
                 )}
               </div>
-              <Badge
-                variant={user.estatus_servicio ? "outline" : "destructive"}
-                className={
-                  user.estatus_servicio
-                    ? "bg-green-100 text-green-800 hover:bg-green-100 border-green-200 font-medium flex-shrink-0"
-                    : "bg-red-700 text-white hover:bg-red-800 font-medium flex-shrink-0"
-                }
-              >
-                {user.estatus_servicio ? "Activo" : "Suspendido"}
-              </Badge>
+              <ServiceStatusBadge customer={user} className="flex-shrink-0" />
             </div>
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100">
               {permissions?.canAccessCobranza && (
@@ -202,16 +184,7 @@ export const Table: FC<TableProps> = ({ data, handleUpdateCliente, handleRegiste
                   )}
                 </div>
               </div>
-              <Badge
-                variant={user.estatus_servicio ? "outline" : "destructive"}
-                className={
-                  user.estatus_servicio
-                    ? "bg-green-100 text-green-800 hover:bg-green-100 border-green-200 font-medium flex-shrink-0"
-                    : "bg-red-700 text-white hover:bg-red-800 font-medium flex-shrink-0"
-                }
-              >
-                {user.estatus_servicio ? "Activo" : "Suspendido"}
-              </Badge>
+              <ServiceStatusBadge customer={user} className="flex-shrink-0" />
             </div>
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100">
               {permissions?.canAccessCobranza && (

@@ -17,7 +17,9 @@ export interface TicketData {
   id_cliente: number;
   estatus: string;
   id_tecnico: number | null;
-  actualizacion?: TicketActualizacion[]; // Opcional temporalmente
+  actualizacion?: TicketActualizacion[];
+  /** Campo pendiente en la API — preparado para cuando el backend lo soporte */
+  reasignado?: boolean;
 }
 
 export interface TicketRequest {
@@ -33,6 +35,8 @@ export interface TicketAttributes {
   updatedAt: string;
   publishedAt: string;
   actualizacion?: TicketActualizacion[];
+  /** Campo pendiente en la API — preparado para cuando el backend lo soporte */
+  reasignado?: boolean;
 }
 
 export interface TicketItem {
