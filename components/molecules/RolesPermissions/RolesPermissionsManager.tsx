@@ -16,6 +16,7 @@ import { PencilIcon, TrashIcon, PlusIcon, ShieldIcon } from "@primer/octicons-re
 import { Loader2, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { rolesPermissionsService } from "@/lib/services/rolesPermissionsService";
+import { ConfirmActionModal } from "@/components/molecules/ConfirmActionModal/ConfirmActionModal";
 import {
   ACTION_LABELS,
   createEmptyPermissionsMap,
@@ -29,6 +30,12 @@ import {
   RoleDefinition,
   RolePermissionsMap,
 } from "@/types/rolesPermissions";
+import {
+  firstFieldErrorMessage,
+  hasFieldErrors,
+  validateRoleForm,
+  type FieldErrors,
+} from "@/lib/utils/formValidation";
 
 export function RolesPermissionsManager() {
   const { toast } = useToast();
@@ -39,6 +46,7 @@ export function RolesPermissionsManager() {
   const [selectedRole, setSelectedRole] = useState<RoleDefinition | null>(null);
   const [roleToDelete, setRoleToDelete] = useState<RoleDefinition | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [formErrors, setFormErrors] = useState<FieldErrors>({});
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -60,12 +68,32 @@ export function RolesPermissionsManager() {
 
   const isEditing = selectedRole !== null;
 
+  const requireName = !selectedRole?.isSystem;
+
+  const isFormComplete = useMemo(
+    () =>
+      !hasFieldErrors(
+        validateRoleForm(formData, { requireName })
+      ),
+    [formData, requireName]
+  );
+
+  const clearFieldError = (field: string) => {
+    setFormErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
   const resetForm = useCallback(() => {
     setFormData({
       name: "",
       description: "",
       permissions: createEmptyPermissionsMap(),
     });
+    setFormErrors({});
     setSelectedRole(null);
   }, []);
 
@@ -76,6 +104,7 @@ export function RolesPermissionsManager() {
 
   const openEditModal = (role: RoleDefinition) => {
     setSelectedRole(role);
+    setFormErrors({});
     setFormData({
       name: role.name,
       description: role.description,
@@ -93,17 +122,30 @@ export function RolesPermissionsManager() {
       ...prev,
       permissions: normalizeModulePermissions(prev.permissions, moduleId, action, checked),
     }));
+    clearFieldError("permissions");
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const validationErrors = validateRoleForm(formData, { requireName });
+    if (hasFieldErrors(validationErrors)) {
+      setFormErrors(validationErrors);
+      toast({
+        title: "Formulario incompleto",
+        description: firstFieldErrorMessage(validationErrors),
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSaving(true);
 
     try {
       if (isEditing && selectedRole) {
         rolesPermissionsService.updateRole(selectedRole.id, {
-          name: selectedRole.isSystem ? selectedRole.name : formData.name,
-          description: formData.description,
+          name: selectedRole.isSystem ? selectedRole.name : formData.name.trim(),
+          description: formData.description.trim(),
           permissions: formData.permissions,
         });
         toast({
@@ -111,18 +153,9 @@ export function RolesPermissionsManager() {
           description: `Los permisos de "${selectedRole.name}" se guardaron correctamente.`,
         });
       } else {
-        if (!formData.name.trim()) {
-          toast({
-            title: "Nombre requerido",
-            description: "Ingresa un nombre para el nuevo rol.",
-            variant: "destructive",
-          });
-          return;
-        }
-
         rolesPermissionsService.createRole({
-          name: formData.name,
-          description: formData.description,
+          name: formData.name.trim(),
+          description: formData.description.trim(),
           permissions: formData.permissions,
         });
         toast({
@@ -136,7 +169,7 @@ export function RolesPermissionsManager() {
       loadRoles();
     } catch (error) {
       toast({
-        title: "Error",
+        title: "Error al guardar el rol",
         description: error instanceof Error ? error.message : "No se pudo guardar el rol.",
         variant: "destructive",
       });
@@ -317,17 +350,27 @@ export function RolesPermissionsManager() {
             </DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleSave} className="space-y-6">
+          <form onSubmit={handleSave} className="space-y-6" noValidate>
             {!selectedRole?.isSystem && (
               <div className="space-y-2">
-                <Label htmlFor="role-name">Nombre del rol</Label>
+                <Label htmlFor="role-name">
+                  Nombre del rol <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="role-name"
                   value={formData.name}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) => {
+                    setFormData((prev) => ({ ...prev, name: e.target.value }));
+                    clearFieldError("name");
+                  }}
                   placeholder="Ej. Gerente de operaciones"
-                  required={!isEditing || !selectedRole?.isSystem}
+                  className={formErrors.name ? "border-red-500" : ""}
+                  aria-invalid={Boolean(formErrors.name)}
+                  disabled={isSaving}
                 />
+                {formErrors.name && (
+                  <p className="text-xs text-red-600">{formErrors.name}</p>
+                )}
               </div>
             )}
 
@@ -347,12 +390,22 @@ export function RolesPermissionsManager() {
                 }
                 placeholder="Describe el propósito de este rol..."
                 rows={2}
+                disabled={isSaving}
               />
             </div>
 
             <div className="space-y-3">
-              <Label>Permisos por módulo</Label>
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <Label>
+                Permisos por módulo <span className="text-red-500">*</span>
+              </Label>
+              <p className="text-xs text-gray-500">
+                Debe seleccionar al menos un permiso para guardar el rol.
+              </p>
+              <div
+                className={`border rounded-lg overflow-hidden ${
+                  formErrors.permissions ? "border-red-500" : "border-gray-200"
+                }`}
+              >
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[640px] text-sm">
                     <thead className="bg-gray-50">
@@ -392,6 +445,7 @@ export function RolesPermissionsManager() {
                                       }
                                       className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                                       aria-label={`${module.label} - ${ACTION_LABELS[action]}`}
+                                      disabled={isSaving}
                                     />
                                   ) : (
                                     <span className="text-gray-300">—</span>
@@ -406,6 +460,9 @@ export function RolesPermissionsManager() {
                   </table>
                 </div>
               </div>
+              {formErrors.permissions && (
+                <p className="text-xs text-red-600">{formErrors.permissions}</p>
+              )}
             </div>
 
             <div className="flex gap-3 pt-2">
@@ -424,7 +481,7 @@ export function RolesPermissionsManager() {
               <Button
                 type="submit"
                 className="flex-1 bg-blue-600 hover:bg-blue-700"
-                disabled={isSaving}
+                disabled={isSaving || !isFormComplete}
               >
                 {isSaving ? (
                   <>
@@ -442,31 +499,22 @@ export function RolesPermissionsManager() {
         </DialogContent>
       </Dialog>
 
-      {showDeleteModal && roleToDelete && (
-        <div className="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50 z-50 p-4">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-sm text-center">
-            <h2 className="text-lg font-semibold text-gray-800 mb-2">¿Eliminar rol?</h2>
-            <p className="text-gray-600 text-sm mb-4">
-              ¿Eliminar el rol <strong>{roleToDelete.name}</strong>? Los usuarios con este rol
-              deberán reasignarse manualmente.
-            </p>
-            <div className="flex gap-3 justify-center">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowDeleteModal(false);
-                  setRoleToDelete(null);
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={handleDelete}>
-                Confirmar
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmActionModal
+        open={showDeleteModal && !!roleToDelete}
+        title="¿Eliminar rol?"
+        description={
+          <>
+            ¿Eliminar el rol <strong>{roleToDelete?.name}</strong>? Los usuarios con este rol
+            deberán reasignarse manualmente.
+          </>
+        }
+        confirmLabel="Eliminar"
+        onConfirm={handleDelete}
+        onCancel={() => {
+          setShowDeleteModal(false);
+          setRoleToDelete(null);
+        }}
+      />
     </div>
   );
 }

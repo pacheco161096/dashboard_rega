@@ -5,7 +5,6 @@ const sectionNames: Record<string, string> = {
   '/dashboard': 'Inicio',
   '/dashboard/customers': 'Clientes',
   '/dashboard/cobranza': 'Cobranza',
-  '/dashboard/almacen': 'Almacén',
   '/dashboard/reportes': 'Reportes',
   '/dashboard/usuarios': 'Usuarios',
 }

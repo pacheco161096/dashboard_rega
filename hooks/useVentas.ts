@@ -76,9 +76,14 @@ export function useVentas(options: UseVentasOptions = {}): UseVentasReturn {
     if (autoLoad && userId) {
       obtenerTransaccionesDelDia(userId, fecha).catch((err) => {
         console.error("Error loading ventas:", err);
+        toast({
+          title: "Error al cargar ventas",
+          description: err instanceof Error ? err.message : "No se pudieron cargar las ventas del día",
+          variant: "destructive",
+        });
       });
     }
-  }, [autoLoad, userId, fecha, obtenerTransaccionesDelDia]);
+  }, [autoLoad, userId, fecha, obtenerTransaccionesDelDia, toast]);
 
   return {
     transacciones,

@@ -14,11 +14,10 @@ import { TicketListResponse, TicketRequest, TicketActualizacion, TicketItem } fr
 import { getUserPermissions } from "@/lib/roles"
 import { UsuariosService } from "@/lib/services/usuariosService"
 import { customersService } from "@/lib/services/customersService"
+import { useToast } from "@/hooks/use-toast"
 
-/** Simular reasignación localmente hasta que la API exponga el campo `reasignado` */
-const SIMULAR_REASIGNACION = true
+/** Badge "Reasignado" local hasta que la API exponga el campo `reasignado` */
 const REASSIGNED_STORAGE_KEY = "ticket_reassigned_ids"
-const TECHNICIAN_OVERRIDE_KEY = "ticket_technician_overrides"
 
 type TicketStatusFilter = "todos" | "en_proceso" | "finalizados"
 
@@ -81,22 +80,6 @@ function markTicketReassigned(idReal: number) {
   localStorage.setItem(REASSIGNED_STORAGE_KEY, JSON.stringify([...ids]))
 }
 
-function getTechnicianOverrides(): Record<string, string> {
-  if (typeof window === "undefined") return {}
-  try {
-    const stored = localStorage.getItem(TECHNICIAN_OVERRIDE_KEY)
-    return stored ? (JSON.parse(stored) as Record<string, string>) : {}
-  } catch {
-    return {}
-  }
-}
-
-function saveTechnicianOverride(idReal: number, idTecnico: string) {
-  const overrides = getTechnicianOverrides()
-  overrides[idReal.toString()] = idTecnico
-  localStorage.setItem(TECHNICIAN_OVERRIDE_KEY, JSON.stringify(overrides))
-}
-
 function resolveTecnicoNombre(idTecnico: string, tecnicos: Tecnico[]): string {
   if (!idTecnico) return "No asignado"
   const tecnico = tecnicos.find((t) => t.id === idTecnico)
@@ -130,15 +113,13 @@ function transformTicketItem(
   ticket: TicketItem,
   clientesMap: Map<string, ClienteInfo>,
   tecnicos: Tecnico[],
-  reassignedIds: Set<number>,
-  technicianOverrides: Record<string, string>
+  reassignedIds: Set<number>
 ): Ticket {
   const actualizaciones = ticket.attributes.actualizacion || []
   const primeraDescripcion =
     actualizaciones.length > 0 ? actualizaciones[0].descripcion : "Sin descripción disponible"
   const clienteInfo = clientesMap.get(ticket.attributes.id_cliente)
-  const idTecnicoOverride = technicianOverrides[ticket.id.toString()]
-  const idTecnico = idTecnicoOverride || ticket.attributes.id_tecnico || ""
+  const idTecnico = ticket.attributes.id_tecnico || ""
 
   return {
     id: `TK-${ticket.id.toString().padStart(3, "0")}`,
@@ -193,13 +174,11 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
   const [updateDescription, setUpdateDescription] = useState<string>("")
   const [isUpdating, setIsUpdating] = useState(false)
   const [updateError, setUpdateError] = useState<string | null>(null)
-  const [updateSuccess, setUpdateSuccess] = useState(false)
   const [isReassigning, setIsReassigning] = useState(false)
   const [selectedNewTecnico, setSelectedNewTecnico] = useState<string>("")
   const [isReassigningSaving, setIsReassigningSaving] = useState(false)
-  const [reassignError, setReassignError] = useState<string | null>(null)
-  const [reassignSuccess, setReassignSuccess] = useState(false)
   const permissions = getUserPermissions()
+  const { toast } = useToast()
 
   const loadTecnicos = useCallback(async () => {
     try {
@@ -221,7 +200,6 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
 
       const response: TicketListResponse = await ticketService.getTickets()
       const reassignedIds = getReassignedIds()
-      const technicianOverrides = getTechnicianOverrides()
 
       const sortedData = [...response.data].sort((a, b) => {
         const dateA = new Date(a.attributes.createdAt).getTime()
@@ -239,13 +217,7 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
       setTecnicos(tecnicosDataResolved)
 
       const transformedTickets = sortedData.map((ticket) =>
-        transformTicketItem(
-          ticket,
-          clientesMap,
-          tecnicosDataResolved,
-          reassignedIds,
-          technicianOverrides
-        )
+        transformTicketItem(ticket, clientesMap, tecnicosDataResolved, reassignedIds)
       )
 
       setTickets(transformedTickets)
@@ -266,18 +238,14 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
       setNewStatus(selectedTicket.estatus)
       setUpdateDescription("")
       setUpdateError(null)
-      setUpdateSuccess(false)
       setIsReassigning(false)
       setSelectedNewTecnico(selectedTicket.id_tecnico)
-      setReassignError(null)
-      setReassignSuccess(false)
     }
   }, [selectedTicket])
 
   const refreshTicketsList = async (tecnicosData: Tecnico[]) => {
     const ticketsResponse: TicketListResponse = await ticketService.getTickets()
     const reassignedIds = getReassignedIds()
-    const technicianOverrides = getTechnicianOverrides()
 
     const sortedData = [...ticketsResponse.data].sort((a, b) => {
       const dateA = new Date(a.attributes.createdAt).getTime()
@@ -289,34 +257,52 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
     const clientesMap = await fetchClientesMap(clientIds)
 
     return sortedData.map((ticket) =>
-      transformTicketItem(ticket, clientesMap, tecnicosData, reassignedIds, technicianOverrides)
+      transformTicketItem(ticket, clientesMap, tecnicosData, reassignedIds)
     )
   }
 
   const handleUpdateStatus = async () => {
     if (!selectedTicket) return
 
-    if (!updateDescription.trim()) {
-      setUpdateError("Por favor, ingresa el reporte del técnico")
+    const reporte = updateDescription.trim()
+    if (!reporte) {
+      const message = "Ingresa el reporte del técnico antes de actualizar el estatus"
+      setUpdateError(message)
+      toast({
+        title: "Información incompleta",
+        description: message,
+        variant: "destructive",
+      })
       return
     }
 
     setIsUpdating(true)
     setUpdateError(null)
-    setUpdateSuccess(false)
 
     try {
+      const fechaActual = new Date().toISOString().split("T")[0]
+      const actualizacionesExistentes = (selectedTicket.actualizaciones || []).map(
+        (item) => ({
+          ...(item.id != null ? { id: item.id } : {}),
+          fecha: item.fecha,
+          descripcion: item.descripcion,
+        })
+      )
+
       const ticketData: TicketRequest = {
         data: {
           fecha: selectedTicket.fecha,
           id_cliente: parseInt(selectedTicket.id_cliente),
           estatus: newStatus,
           id_tecnico: selectedTicket.id_tecnico ? parseInt(selectedTicket.id_tecnico) : null,
+          actualizacion: [
+            ...actualizacionesExistentes,
+            { fecha: fechaActual, descripcion: reporte },
+          ],
         },
       }
 
       await ticketService.updateTicket(selectedTicket.idReal, ticketData)
-      setUpdateSuccess(true)
 
       const transformedTickets = await refreshTicketsList(tecnicos)
       setTickets(transformedTickets)
@@ -325,14 +311,19 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
         onStatusUpdate()
       }
 
-      setTimeout(() => {
-        setSelectedTicket(null)
-        setUpdateDescription("")
-        setUpdateSuccess(false)
-      }, 1000)
+      toast({
+        title: "Ticket actualizado",
+        description: "El estatus y el reporte se guardaron correctamente",
+      })
+      setSelectedTicket(null)
+      setUpdateDescription("")
     } catch (err: unknown) {
       console.error("Error al actualizar el ticket:", err)
-      setUpdateError(err instanceof Error ? err.message : "Error al actualizar el ticket")
+      toast({
+        title: "Error al actualizar",
+        description: err instanceof Error ? err.message : "No se pudo actualizar el ticket",
+        variant: "destructive",
+      })
     } finally {
       setIsUpdating(false)
     }
@@ -344,8 +335,6 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
     if (!isReassigning) {
       setIsReassigning(true)
       setSelectedNewTecnico(selectedTicket.id_tecnico)
-      setReassignError(null)
-      setReassignSuccess(false)
       return
     }
 
@@ -358,8 +347,6 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
     }
 
     setIsReassigningSaving(true)
-    setReassignError(null)
-    setReassignSuccess(false)
 
     try {
       const ticketData: TicketRequest = {
@@ -368,36 +355,45 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
           id_cliente: parseInt(selectedTicket.id_cliente),
           estatus: selectedTicket.estatus,
           id_tecnico: parseInt(selectedNewTecnico),
-          // reasignado: true — pendiente de soporte en la API
+          actualizacion: (selectedTicket.actualizaciones || []).map((item) => ({
+            ...(item.id != null ? { id: item.id } : {}),
+            fecha: item.fecha,
+            descripcion: item.descripcion,
+          })),
         },
       }
 
-      if (!SIMULAR_REASIGNACION) {
-        await ticketService.updateTicket(selectedTicket.idReal, ticketData)
-      }
-
+      await ticketService.updateTicket(selectedTicket.idReal, ticketData)
       markTicketReassigned(selectedTicket.idReal)
-      saveTechnicianOverride(selectedTicket.idReal, selectedNewTecnico)
 
-      const nuevoNombre = resolveTecnicoNombre(selectedNewTecnico, tecnicos)
-      const updatedTicket: Ticket = {
-        ...selectedTicket,
-        id_tecnico: selectedNewTecnico,
-        nombreTecnico: nuevoNombre,
-        reasignado: true,
+      const transformedTickets = await refreshTicketsList(tecnicos)
+      setTickets(transformedTickets)
+
+      const refreshed = transformedTickets.find((t) => t.idReal === selectedTicket.idReal)
+      if (refreshed) {
+        setSelectedTicket(refreshed)
+      } else {
+        const nuevoNombre = resolveTecnicoNombre(selectedNewTecnico, tecnicos)
+        setSelectedTicket({
+          ...selectedTicket,
+          id_tecnico: selectedNewTecnico,
+          nombreTecnico: nuevoNombre,
+          reasignado: true,
+        })
       }
 
-      setSelectedTicket(updatedTicket)
-      setTickets((prev) =>
-        prev.map((t) => (t.idReal === updatedTicket.idReal ? updatedTicket : t))
-      )
       setIsReassigning(false)
-      setReassignSuccess(true)
+      toast({
+        title: "Técnico reasignado",
+        description: "El ticket se asignó al nuevo técnico correctamente",
+      })
     } catch (err: unknown) {
       console.error("Error al reasignar el ticket:", err)
-      setReassignError(
-        err instanceof Error ? err.message : "Error al reasignar el ticket"
-      )
+      toast({
+        title: "Error al reasignar",
+        description: err instanceof Error ? err.message : "No se pudo reasignar el ticket",
+        variant: "destructive",
+      })
     } finally {
       setIsReassigningSaving(false)
     }
@@ -639,10 +635,7 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
                       setSelectedTicket(null)
                       setUpdateDescription("")
                       setUpdateError(null)
-                      setUpdateSuccess(false)
                       setIsReassigning(false)
-                      setReassignError(null)
-                      setReassignSuccess(false)
                     }}
                   >
                     Cerrar
@@ -714,19 +707,6 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
                         </Button>
                       )}
                     </div>
-                    {SIMULAR_REASIGNACION && canReassign && (
-                      <p className="text-xs text-amber-600 mt-1">
-                        TODO: Reasignación se guarda localmente hasta que la API lo soporte por completo.
-                      </p>
-                    )}
-                    {reassignError && (
-                      <p className="text-sm text-red-600 mt-1">{reassignError}</p>
-                    )}
-                    {reassignSuccess && (
-                      <p className="text-sm text-green-600 mt-1">
-                        Técnico reasignado correctamente
-                      </p>
-                    )}
                   </div>
                   {selectedTicket.clienteInfo && (
                     <>
@@ -832,12 +812,6 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
                       {updateError && (
                         <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded-md text-sm">
                           {updateError}
-                        </div>
-                      )}
-
-                      {updateSuccess && (
-                        <div className="p-3 bg-green-100 border border-green-400 text-green-700 rounded-md text-sm">
-                          Ticket actualizado exitosamente
                         </div>
                       )}
 

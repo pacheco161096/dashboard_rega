@@ -2,7 +2,7 @@
 
 > Checklist de seguimiento para deuda técnica, mejoras de flujo, manejo de escenarios y optimización.  
 > Basado en la revisión del proyecto (lint/build OK, tests 0%).  
-> **Última actualización:** Julio 2026 (incluye avances del chat [Ticket system improvements])
+> **Última actualización:** Julio 2026 (incluye avances FE: auth/roles, guards, tickets, APIs centralizadas)
 
 ---
 
@@ -20,46 +20,49 @@
 
 ### 1.1 Crítico / bloqueante para producción
 
-- [ ] **Autenticación server-side**
-  - [ ] Mover `app/middleware.tsx` → `middleware.ts` en la raíz del proyecto (Next.js no ejecuta middleware dentro de `app/`)
-  - [ ] Unificar sesión: login escribe `sessionStorage` pero middleware busca cookie `loginUser`
-  - [ ] Proteger todas las rutas `/dashboard/*` en middleware
+- [x] **Autenticación server-side (parcial FE)**
+  - [x] Mover middleware a `middleware.ts` en la raíz
+  - [x] Cookie `loginUser` sincronizada con `sessionStorage` (`lib/auth/session.ts`)
+  - [x] Proteger todas las rutas `/dashboard/*` en middleware
+  - [ ] Cookie httpOnly / JWT real (requiere backend)
 
 - [ ] **Login seguro**
-  - [ ] Cambiar login de GET con credenciales en query string a POST con body (`app/page.tsx`)
-  - [ ] Eliminar exposición de usuario/contraseña en URL, logs e historial
+  - [x] Login vía `businessApi` + mapeo de `attributes.rol` (`"Admin"`, `"Cajero"`, `"Tecnico"`, …)
+  - [x] Sin fallback a Admin si no hay rol
+  - [ ] Cambiar login de GET a POST con body (requiere endpoint de auth)
+  - [ ] Eliminar exposición de usuario/contraseña en query (hoy aún GET con params)
 
 - [ ] **RBAC real (control de acceso por roles)**
   - [x] UI de roles y permisos personalizados en `/dashboard/usuarios` (pestaña "Roles y permisos")
   - [x] Roles de sistema editables pero no eliminables; roles custom con CRUD completo
   - [x] Matriz de permisos por módulo (ver, crear, editar, eliminar) integrada con `getUserPermissions()`
+  - [x] Guard por página según permisos (`ProtectedRoute` + `ROUTE_ACCESS_PERMISSION`)
+  - [x] Bloquear acceso directo por URL a rutas sin permiso
   - [ ] Persistencia solo en `localStorage` — activar API (`ROLES_PERMISSIONS_API_HABILITADO = false`)
-  - [ ] Agregar guard por página según permisos (no solo ocultar links en Navbar)
-  - [ ] Bloquear acceso directo por URL a rutas sin permiso (ej. `/dashboard/usuarios`, `/dashboard/cobranza`)
   - [ ] Roles personalizados: validar que el backend acepte IDs no numéricos al asignar usuarios
 
-- [ ] **Eliminar selector de rol en producción**
-  - [ ] Quitar selector de rol de pruebas en `components/molecules/InfoClient/InfoClient.tsx`
-  - [ ] Eliminar fallback automático a Admin cuando el usuario no tiene rol
+- [x] **Eliminar selector de rol en producción**
+  - [x] Quitar selector de rol de pruebas en `InfoClient.tsx`
+  - [x] Eliminar fallback automático a Admin cuando el usuario no tiene rol
+  - [x] Logout limpia sesión, cookie y estado residual
 
 ---
 
 ### 1.2 Features a medias
 
-- [ ] **Dashboard principal** (`/dashboard`)
-  - [ ] Implementar contenido real (KPIs, resumen) o redirigir a módulo útil para Admin
+- [x] **Dashboard principal** (`/dashboard`)
+  - [x] Bienvenida para Admin; redirect a primera ruta permitida si no tiene `canAccessInicio`
 
-- [ ] **Login duplicado** (`/dashboard/login`)
-  - [ ] Eliminar stub o redirigir a `/` (login real está en raíz)
+- [x] **Login duplicado** (`/dashboard/login`)
+  - [x] Redirige a `/` (login real está en raíz)
 
-- [ ] **Cobranza → tab Producto**
-  - [ ] Conectar inputs "Buscar Producto" con lógica y API
-  - [ ] O bien ocultar el tab hasta que esté implementado
+- [x] **Cobranza → tab Producto**
+  - [x] Tab Producto oculto hasta tener API (solo flujo Paquete)
 
-- [ ] **TicketTracker — actualizar ticket**
-  - [ ] Enviar campo `actualizacion` en el payload al actualizar (`TicketTracker.tsx` — `updateDescription` se valida en UI pero **no se envía**)
-  - [ ] Persistir reporte del técnico (`updateDescription`) en backend
-  - [ ] Completar lógica de historial de actualizaciones existentes
+- [x] **TicketTracker — actualizar ticket**
+  - [x] Enviar campo `actualizacion` en el payload al actualizar
+  - [x] Persistir reporte del técnico (`updateDescription`) en backend
+  - [x] Incluir historial de actualizaciones existentes + nueva entrada
 
 - [x] **TicketTracker — búsqueda y filtros**
   - [x] Búsqueda ampliada: ID ticket, ID cliente, nombre, correo, teléfono, descripción
@@ -69,12 +72,11 @@
   - [x] Cargar técnicos con `UsuariosService.obtenerTecnicos()` (misma fuente que TicketForm)
   - [x] Mostrar nombre del técnico en lugar del ID
 
-- [ ] **TicketTracker — reasignación de técnicos**
+- [x] **TicketTracker — reasignación de técnicos**
   - [x] UI de reasignación (select, botón dinámico Reasignar / Cancelar / Guardar con iconos)
-  - [x] Bandera visual "Reasignado"
-  - [ ] Hoy es **simulación local** (`SIMULAR_REASIGNACION = true` + `localStorage`) — no llama API
-  - [ ] Persistir `id_tecnico` y campo `reasignado` en backend cuando la API lo soporte
-  - [ ] Quitar overrides de `localStorage` al activar API real
+  - [x] Bandera visual "Reasignado" (local hasta que API tenga `reasignado`)
+  - [x] Persistir `id_tecnico` vía `updateTicket` (API real)
+  - [ ] Campo `reasignado` en backend cuando la API lo soporte (badge local mientras tanto)
 
 - [ ] **Clientes — estatus de servicio**
   - [x] Filtros Activos / Inactivos / Cancelados / Todos en la misma fila del buscador
@@ -84,34 +86,34 @@
   - [ ] Activar `ESTADO_SERVICIO_API_HABILITADO = true` cuando el backend exponga el campo
   - [ ] Verificar filtro Cancelados con datos reales de API
 
-- [ ] **RegisterPay** (`components/molecules/RegisterPay/RegisterPay.tsx`)
-  - [ ] Integrar con API de pago o eliminar componente legacy (hoy solo hace `console.log`)
+- [x] **RegisterPay** — eliminado (legacy sin uso; pago vive en cobranza)
 
-- [ ] **UpdateCustomer** (`components/molecules/updateCustomer/UpdateCustomer.tsx`)
-  - [ ] Implementar submit y persistencia o eliminar si no se usará
+- [x] **UpdateCustomer** — eliminado (legacy sin uso; edición vía `CustomerForm`)
 
-- [ ] **Módulo Almacén**
-  - [ ] Crear ruta `/dashboard/almacen` o quitar referencia en `SectionTitle.tsx`
+- [x] **Módulo Almacén**
+  - [x] Quitada referencia en `SectionTitle.tsx`
 
-- [ ] **Eliminar cliente**
-  - [ ] Implementar acción usando permiso `canDeleteClient` (definido y mapeado en roles, pero no usado en UI)
+- [x] **Eliminar cliente**
+  - [x] Acción con permiso `canDeleteClient` + modal de confirmación (`ConfirmActionModal`)
+  - [x] Mismo modal reutilizado en usuarios, roles y cerrar sesión
 
 ---
 
 ### 1.3 Inconsistencias de backend / APIs
 
-- [ ] **Centralizar URLs de API**
-  - [x] `customersService` usa `businessApi` de `lib/api/config.ts`
-  - [ ] Usar `lib/api/config.ts` en todos los módulos (evitar URLs hardcodeadas repetidas)
-  - [ ] Migrar `lib/ticketService.ts` a la instancia central de API (sigue con URL hardcodeada)
+- [x] **Centralizar URLs de API (capa principal)**
+  - [x] `customersService` usa `businessApi`
+  - [x] `ticketService` usa `businessApi` + `handleApiError`
+  - [x] `UsuariosService` usa `businessApi` (login, CRUD, técnicos)
+  - [x] `CustomerForm` / `CreateCustomer` usan `businessApi`
+  - [ ] Revisar si quedan llamadas axios directas residuales
 
-- [ ] **Unificar backend de usuarios/técnicos**
-  - [ ] Login / Usuarios / Clientes → `monkfish-app` (BUSINESS API)
-  - [ ] TicketForm y TicketTracker (técnicos) → `cms.regatelecom.mx` (CMS API vía `UsuariosService`)
-  - [ ] Definir una sola fuente de verdad para usuarios y técnicos
+- [x] **Unificar backend de usuarios/técnicos (FE)**
+  - [x] Login / Usuarios / Técnicos / Tickets → BUSINESS API (`monkfish-app`)
+  - [ ] Confirmar en backend que `filters[rol][$eq]=Tecnico` es la fuente oficial
 
-- [ ] **Alinear operaciones CRUD de usuarios**
-  - [ ] GET/POST/DELETE y UPDATE deben usar el mismo backend y manejo de errores (`app/dashboard/usuarios/page.tsx`)
+- [x] **Alinear operaciones CRUD de usuarios**
+  - [x] GET/POST/PUT/DELETE vía `UsuariosService` + `handleApiError`
 
 - [ ] **Roles y permisos — backend**
   - [ ] Implementar endpoints de roles/permisos en API
@@ -149,27 +151,27 @@
 
 ### 2.1 Autenticación y sesión
 
-- [ ] Implementar flujo: Login POST → token/cookie httpOnly (o cookie + sessionStorage sincronizados)
-- [ ] `middleware.ts` en raíz validando sesión en todas las rutas `/dashboard/*`
-- [ ] Guard por página según `ROLE_PERMISSIONS` / roles custom con redirect si no tiene permiso
-- [ ] Logout limpiando todo el estado: `loginUser`, `caja`, `selectedUser`, roles en memoria, etc.
-- [ ] Eliminar fallback `roleId || "1"` (Admin por defecto) en login
+- [x] Cookie + sessionStorage sincronizados (`lib/auth/session.ts`)
+- [x] `middleware.ts` en raíz validando sesión en `/dashboard/*`
+- [x] Guard por página según permisos con redirect
+- [x] Logout limpiando sesión, cookie y estado residual
+- [x] Eliminar fallback Admin en login
+- [ ] Login POST + token/cookie httpOnly (requiere backend)
 
 ### 2.2 Flujos de negocio
 
-- [ ] **Cliente → Cobranza:** si no hay caja abierta, no navegar sin `selectedUser`; mostrar toast claro
-- [ ] **Crear cliente:** dejar de usar password fijo `"123456789"` y rol `"2"` hardcodeado
-- [x] **Crear / seguir ticket:** una sola fuente de técnicos en UI (`UsuariosService.obtenerTecnicos()`)
-- [ ] **Actualizar ticket:** flujo completo estatus + reporte técnico persistido (`actualizacion` en payload)
-- [ ] **Reasignar técnico:** dejar de simular en `localStorage` y persistir en API
-- [ ] **Admin post-login:** no dejar al usuario en `/dashboard` vacío
+- [x] **Cliente → Cobranza:** toast si no hay caja abierta; no guarda `selectedUser` sin caja
+- [x] **Crear cliente:** password temporal generado (ya no `"123456789"`); `role: "2"` se mantiene como rol Strapi de cliente
+- [x] **Crear / seguir ticket:** técnicos desde BUSINESS API
+- [x] **Actualizar ticket:** estatus + reporte técnico en `actualizacion`
+- [x] **Reasignar técnico:** `id_tecnico` persistido en API
+- [x] **Admin post-login:** bienvenida en `/dashboard`
 - [x] **Clientes:** filtros de estatus + búsqueda en servidor (debounce 400 ms)
 - [ ] **Clientes Cancelado:** activar cuando API soporte `estado_servicio`
 
 ### 2.3 Layout y estructura
 
-- [ ] Corregir `app/dashboard/layout.tsx` — quitar `<html>` y `<body>` anidados (ya existen en `app/layout.tsx`)
-- [ ] Evitar HTML inválido y posibles bugs de hidratación
+- [x] Corregir `app/dashboard/layout.tsx` — sin `<html>` / `<body>` anidados
 
 ---
 
@@ -184,24 +186,24 @@
 | Usuarios | ✅ Toast | ✅ Toast | — |
 | Roles y permisos | ✅ Toast | ✅ Toast | Solo localStorage; sin sync multi-dispositivo |
 | Clientes (fetch) | Lista cargada | ✅ Mensaje + reintentar (`fetchError`) | — |
-| CustomerForm / CreateCustomer | Cierra modal | ❌ Solo `console.error` | Toast éxito/error |
-| Tickets crear | Redirige | Banner inline | — |
-| Tickets stats | Muestra 0 | Estado interno | Avisar si hubo error |
-| TicketTracker update | Banner verde | Inline | Éxito engañoso si no guarda reporte (`actualizacion`) |
-| TicketTracker reasignación | Banner local | Inline | Simulación: no falla por API pero no persiste en servidor |
-| useVentas | — | console | `useToast` importado, no usado |
-| useTicketForm / useTicketStats | — | String inline | Sin toast |
+| CustomerForm / CreateCustomer | ✅ Toast | ✅ Toast | — |
+| Tickets crear | ✅ Toast + redirige | ✅ Toast + banner | — |
+| Tickets stats | Lista | ✅ Banner de error | — |
+| TicketTracker update | Banner verde | Inline | Reporte sí se envía |
+| TicketTracker reasignación | Banner | Inline | `id_tecnico` en API |
+| useVentas | — | ✅ Toast en autoLoad | — |
+| useTicketForm / useTicketStats | ✅ Toast / banner | ✅ | — |
 
 ### 3.2 Tareas de mejora de feedback
 
 - [x] **Clientes:** mostrar mensaje visible cuando falla el fetch (no solo lista vacía)
-- [ ] **CustomerForm / CreateCustomer:** toast de éxito y error
-- [ ] **Cobranza:** avisar al usuario cuando referencia de pago es inválida (no return silencioso)
-- [ ] **useVentas:** usar toast o quitar import muerto de `useToast`
-- [ ] **useTicketForm / useTicketStats:** alinear con patrón de toast de cobranza
-- [ ] **Tickets stats:** indicar al usuario si hubo error al cargar estadísticas
-- [ ] **TicketTracker update:** no mostrar éxito si el reporte del técnico no se persistió
-- [ ] Unificar patrón de feedback en todo el proyecto (preferir toast Radix)
+- [x] **CustomerForm / CreateCustomer:** toast de éxito y error
+- [x] **Cobranza:** avisar al usuario cuando referencia de pago es inválida
+- [x] **useVentas:** toast en error de autoLoad
+- [x] **useTicketForm / useTicketStats:** toast / banner de error
+- [x] **Tickets stats:** indicar al usuario si hubo error al cargar estadísticas
+- [x] **TicketTracker update:** solo éxito tras persistir `actualizacion`
+- [ ] Unificar patrón de feedback en todo el proyecto (preferir toast Radix) — casi completo
 
 ---
 
@@ -261,7 +263,7 @@
 ### 4.1 Performance (impacto alto)
 
 - [x] **Clientes:** filtros y búsqueda en servidor + campos mínimos (`customersService`, sin `populate=*`)
-- [ ] **Clientes:** paginación server-side (hoy se carga el listado filtrado completo y se pagina en cliente)
+- [x] **Clientes:** paginación server-side (`pagination[page]` / `pageSize` / `withCount`)
 - [x] **TicketTracker:** carga solo clientes por IDs referenciados (`fetchCustomersByIds`), no todos los usuarios
 - [ ] **ventaService:** reducir N requests en `obtenerTransaccionesDeVentas`
 - [x] **Clientes:** re-fetch solo al cerrar modal de cliente (no en cada toggle)
@@ -288,23 +290,23 @@
 
 ### Fase 1 — Seguridad y estabilidad (1–2 sprints)
 
-- [ ] Mover y corregir middleware; unificar cookie/sessionStorage
-- [ ] Login POST; quitar credenciales de URL
-- [ ] Eliminar selector de rol de `InfoClient`
-- [ ] Guards por ruta según permisos (roles sistema + custom)
-- [ ] Corregir layout anidado html/body
-- [ ] Unificar URLs de API en `lib/api/config.ts`
+- [x] Mover y corregir middleware; unificar cookie/sessionStorage
+- [ ] Login POST; quitar credenciales de URL (pendiente backend)
+- [x] Eliminar selector de rol de `InfoClient`
+- [x] Guards por ruta según permisos (roles sistema + custom)
+- [x] Corregir layout anidado html/body
+- [x] Unificar URLs de API en `lib/api/config.ts`
 
 ### Fase 2 — Completar features (2–3 sprints)
 
-- [ ] Completar actualización de tickets (`actualizacion` en payload)
-- [ ] Reasignación real de técnicos (quitar simulación `localStorage`)
+- [x] Completar actualización de tickets (`actualizacion` en payload)
+- [x] Reasignación real de técnicos (`id_tecnico` en API)
 - [ ] Activar API de roles/permisos (`ROLES_PERMISSIONS_API_HABILITADO`)
 - [ ] Activar estatus Cancelado cuando backend esté listo (`ESTADO_SERVICIO_API_HABILITADO`)
-- [ ] Implementar u ocultar tab Producto en cobranza
-- [ ] Contenido real en `/dashboard` o redirección útil
-- [ ] Feedback consistente (toasts) en formularios de cliente
-- [ ] Limpiar componentes legacy (`RegisterPay`, `UpdateCustomer`, stub login)
+- [x] Ocultar tab Producto en cobranza
+- [x] Contenido / redirect útil en `/dashboard`
+- [x] Feedback consistente (toasts) en formularios de cliente
+- [x] Limpiar componentes legacy (`RegisterPay`, `UpdateCustomer`, stub login)
 
 ### Fase 3 — Calidad y rendimiento
 

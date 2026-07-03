@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { ticketService } from "@/lib/ticketService";
-import { TicketListResponse } from "@/types/ticket";
+import { TicketItem, TicketListResponse } from "@/types/ticket";
 
 interface TicketStats {
   total: number;
@@ -12,7 +12,7 @@ interface TicketStats {
 }
 
 export const useTicketStats = (): TicketStats => {
-  const [tickets, setTickets] = useState<any[]>([]);
+  const [tickets, setTickets] = useState<TicketItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -24,9 +24,9 @@ export const useTicketStats = (): TicketStats => {
 
       const response: TicketListResponse = await ticketService.getTickets();
       setTickets(response.data || []);
-    } catch (error: any) {
-      console.error("Error al cargar estadísticas:", error);
-      setError(error.message);
+    } catch (err: unknown) {
+      console.error("Error al cargar estadísticas:", err);
+      setError(err instanceof Error ? err.message : "Error al cargar estadísticas");
       setTickets([]);
     } finally {
       setIsLoading(false);
@@ -38,14 +38,12 @@ export const useTicketStats = (): TicketStats => {
   }, [loadStats, refreshTrigger]);
 
   const refreshStats = useCallback(async () => {
-    setRefreshTrigger(prev => prev + 1);
+    setRefreshTrigger((prev) => prev + 1);
   }, []);
 
-  // Memoizar el cálculo de estadísticas
   const stats = useMemo(() => {
     const total = tickets.length;
-    
-    // Optimizar el filtrado usando reduce en una sola pasada
+
     const { enProceso, finalizados } = tickets.reduce(
       (acc, ticket) => {
         const estatus = ticket.attributes?.estatus;
