@@ -63,3 +63,18 @@ export function clearSession() {
 export function isAuthenticated(): boolean {
   return getSessionUser() !== null;
 }
+
+/** Indica si hay una caja abierta en Cobranza (persistida en sessionStorage). */
+export function isCajaOpen(): boolean {
+  if (typeof window === "undefined") return false;
+
+  const raw = sessionStorage.getItem(SESSION_KEYS.CAJA);
+  if (!raw) return false;
+
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed != null && typeof parsed === "object";
+  } catch {
+    return false;
+  }
+}
