@@ -103,8 +103,7 @@ async function fetchClientesMap(clientIds: string[]): Promise<Map<string, Client
         email: cliente.email || "",
       })
     })
-  } catch (error) {
-    console.error("Error al cargar clientes:", error)
+  } catch {
   }
   return clientesMap
 }
@@ -187,8 +186,7 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
         id: usuario.id.toString(),
         nombre: usuario.attributes.nombre || "Sin nombre",
       }))
-    } catch (err) {
-      console.error("Error al cargar técnicos:", err)
+    } catch {
       return []
     }
   }, [])
@@ -222,7 +220,6 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
 
       setTickets(transformedTickets)
     } catch (err: unknown) {
-      console.error("Error al cargar tickets:", err)
       setError(err instanceof Error ? err.message : "Error desconocido")
     } finally {
       setIsLoading(false)
@@ -318,7 +315,6 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
       setSelectedTicket(null)
       setUpdateDescription("")
     } catch (err: unknown) {
-      console.error("Error al actualizar el ticket:", err)
       toast({
         title: "Error al actualizar",
         description: err instanceof Error ? err.message : "No se pudo actualizar el ticket",
@@ -388,7 +384,6 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
         description: "El ticket se asignó al nuevo técnico correctamente",
       })
     } catch (err: unknown) {
-      console.error("Error al reasignar el ticket:", err)
       toast({
         title: "Error al reasignar",
         description: err instanceof Error ? err.message : "No se pudo reasignar el ticket",

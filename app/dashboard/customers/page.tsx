@@ -211,7 +211,6 @@ export default function Customers() {
       }
     } catch (err) {
       if (requestId !== fetchIdRef.current) return;
-      console.error("Error al cargar clientes:", err)
       const message = err instanceof Error ? err.message : "Error al cargar clientes"
       setFetchError(message)
       setData([]);

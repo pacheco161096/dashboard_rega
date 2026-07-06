@@ -25,7 +25,6 @@ export const useTicketStats = (): TicketStats => {
       const response: TicketListResponse = await ticketService.getTickets();
       setTickets(response.data || []);
     } catch (err: unknown) {
-      console.error("Error al cargar estadísticas:", err);
       setError(err instanceof Error ? err.message : "Error al cargar estadísticas");
       setTickets([]);
     } finally {

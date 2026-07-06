@@ -41,7 +41,6 @@ export function ClienteModal({ open, onOpenChange }: ClientModalProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("Form data:", formData)
     // Aquí iría la lógica para enviar los datos al servidor
     onOpenChange(false)
   }

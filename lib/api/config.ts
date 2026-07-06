@@ -1,7 +1,6 @@
 import axios, {
   AxiosInstance,
   AxiosError,
-  AxiosResponse,
   InternalAxiosRequestConfig,
 } from "axios";
 
@@ -123,45 +122,11 @@ const authInterceptor = (
       // const user = JSON.parse(loginUser);
       // config.headers.Authorization = `Bearer ${user.token}`;
     }
-  } catch (error) {
-    console.warn("Error al obtener datos de autenticación:", error);
+  } catch {
+    // Ignorar errores al leer sessionStorage en el interceptor
   }
 
   return config;
-};
-
-/**
- * Interceptor para logging de peticiones (solo en desarrollo)
- */
-const requestLogger = (
-  config: InternalAxiosRequestConfig
-): InternalAxiosRequestConfig => {
-  if (process.env.NODE_ENV === "development") {
-    console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`, {
-      data: config.data,
-      params: config.params,
-    });
-  }
-  return config;
-};
-
-/**
- * Interceptor para logging de respuestas (solo en desarrollo)
- */
-const responseLogger = (response: AxiosResponse) => {
-  if (process.env.NODE_ENV === "development") {
-    const data = response.data;
-    const summary = Array.isArray(data)
-      ? { items: data.length }
-      : data && typeof data === "object" && Array.isArray((data as { data?: unknown }).data)
-        ? { items: (data as { data: unknown[] }).data.length, meta: (data as { meta?: unknown }).meta }
-        : { data };
-    console.log(
-      `[API Response] ${response.config.method?.toUpperCase()} ${response.config.url}`,
-      { status: response.status, ...summary }
-    );
-  }
-  return response;
 };
 
 /**
@@ -183,24 +148,12 @@ export const createApiInstance = (
 
   // Interceptores de request
   instance.interceptors.request.use(authInterceptor);
-  instance.interceptors.request.use(requestLogger);
 
   // Interceptores de response
-  instance.interceptors.response.use(responseLogger, (error: AxiosError) => {
-    // Log del error en desarrollo
-    if (process.env.NODE_ENV === "development") {
-      console.error("[API Error]", {
-        url: error.config?.url,
-        method: error.config?.method,
-        status: error.response?.status,
-        data: error.response?.data,
-        message: error.message,
-      });
-    }
-
-    // Re-lanzar el error para que sea manejado por el código que llama
-    return Promise.reject(error);
-  });
+  instance.interceptors.response.use(
+    (response) => response,
+    (error: AxiosError) => Promise.reject(error)
+  );
 
   return instance;
 };

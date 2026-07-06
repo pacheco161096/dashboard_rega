@@ -117,7 +117,6 @@ export default function Usuarios() {
       })
       setUsuarios(usuariosData)
     } catch (error) {
-      console.error("Error al cargar usuarios:", error)
       toast({
         title: "Error",
         description: handleApiError(error).message || "No se pudieron cargar los usuarios",
@@ -240,7 +239,6 @@ export default function Usuarios() {
       setShowFormModal(false)
       fetchUsuarios()
     } catch (error: unknown) {
-      console.error("Error al crear usuario:", error)
       toast({
         title: "Error al crear usuario",
         description: handleApiError(error).message || "No se pudo crear el usuario",
@@ -296,7 +294,6 @@ export default function Usuarios() {
       setShowFormModal(false)
       fetchUsuarios()
     } catch (error: unknown) {
-      console.error("Error al actualizar usuario:", error)
       toast({
         title: "Error al actualizar usuario",
         description: handleApiError(error).message || "No se pudo actualizar el usuario",
@@ -322,7 +319,6 @@ export default function Usuarios() {
       setUsuarioToDelete(null)
       fetchUsuarios()
     } catch (error: unknown) {
-      console.error("Error al eliminar usuario:", error)
       toast({
         title: "Error",
         description: handleApiError(error).message || "No se pudo eliminar el usuario",

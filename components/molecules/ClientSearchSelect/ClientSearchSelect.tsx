@@ -22,6 +22,7 @@ export interface ClientSearchSelectProps {
   error?: string;
   className?: string;
   placeholder?: string;
+  variant?: "light" | "dark";
 }
 
 function formatClientLabel(client: CustomerListItem): string {
@@ -38,7 +39,9 @@ export default function ClientSearchSelect({
   error,
   className,
   placeholder = "Buscar por nombre o ID...",
+  variant = "light",
 }: ClientSearchSelectProps) {
+  const isDark = variant === "dark";
   const listboxId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
   const clientsCacheRef = useRef<CustomerListItem[] | null>(null);
@@ -186,20 +189,28 @@ export default function ClientSearchSelect({
       {value ? (
         <div
           className={cn(
-            "flex h-9 w-full items-center gap-2 rounded-md border bg-white px-3 text-sm",
-            error ? "border-red-500" : "border-input",
+            "flex h-9 w-full items-center gap-2 rounded-md border px-3 text-sm",
+            isDark
+              ? "border-gray-700 bg-gray-700/30 text-white"
+              : "border-input bg-white text-gray-900",
+            error ? "border-red-500" : undefined,
             disabled && "opacity-50"
           )}
         >
-          <Search className="h-4 w-4 shrink-0 text-gray-400" />
-          <span className="min-w-0 flex-1 truncate text-gray-900">
+          <Search className={cn("h-4 w-4 shrink-0", isDark ? "text-gray-400" : "text-gray-400")} />
+          <span className={cn("min-w-0 flex-1 truncate", isDark ? "text-white" : "text-gray-900")}>
             {isLoadingSelected ? "Cargando cliente..." : selectedLabel}
           </span>
           {!disabled && (
             <button
               type="button"
               onClick={handleClear}
-              className="rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+              className={cn(
+                "rounded p-0.5",
+                isDark
+                  ? "text-gray-400 hover:bg-gray-600 hover:text-white"
+                  : "text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+              )}
               aria-label="Quitar cliente seleccionado"
             >
               <X className="h-4 w-4" />
@@ -219,7 +230,12 @@ export default function ClientSearchSelect({
             onFocus={() => setIsOpen(true)}
             placeholder={placeholder}
             disabled={disabled}
-            className={cn("h-9 pl-9 pr-9", error && "border-red-500 focus-visible:ring-red-500")}
+            className={cn(
+              "h-9 pl-9 pr-9",
+              isDark &&
+                "border-gray-700 bg-gray-700/30 text-white placeholder:text-gray-500 focus-visible:ring-gray-600",
+              error && "border-red-500 focus-visible:ring-red-500"
+            )}
             role="combobox"
             aria-expanded={showDropdown}
             aria-controls={listboxId}
@@ -236,10 +252,17 @@ export default function ClientSearchSelect({
         <ul
           id={listboxId}
           role="listbox"
-          className="absolute z-50 mt-1 max-h-56 w-full overflow-auto rounded-md border border-gray-200 bg-white py-1 shadow-lg"
+          className={cn(
+            "absolute z-50 mt-1 max-h-56 w-full overflow-auto rounded-md border py-1 shadow-lg",
+            isDark
+              ? "border-gray-600 bg-gray-800"
+              : "border-gray-200 bg-white"
+          )}
         >
           {isSearching && (
-            <li className="px-3 py-2 text-sm text-gray-500">Buscando clientes...</li>
+            <li className={cn("px-3 py-2 text-sm", isDark ? "text-gray-400" : "text-gray-500")}>
+              Buscando clientes...
+            </li>
           )}
 
           {!isSearching && searchError && (
@@ -247,7 +270,7 @@ export default function ClientSearchSelect({
           )}
 
           {!isSearching && !searchError && results.length === 0 && query.trim() && (
-            <li className="px-3 py-2 text-sm text-gray-500">
+            <li className={cn("px-3 py-2 text-sm", isDark ? "text-gray-400" : "text-gray-500")}>
               No se encontraron clientes para &quot;{query.trim()}&quot;
             </li>
           )}
@@ -257,13 +280,18 @@ export default function ClientSearchSelect({
               <li key={client.id} role="option" aria-selected={false}>
                 <button
                   type="button"
-                  className="flex w-full flex-col items-start px-3 py-2 text-left text-sm hover:bg-blue-50 focus:bg-blue-50 focus:outline-none"
+                  className={cn(
+                    "flex w-full flex-col items-start px-3 py-2 text-left text-sm focus:outline-none",
+                    isDark
+                      ? "hover:bg-gray-700 focus:bg-gray-700"
+                      : "hover:bg-blue-50 focus:bg-blue-50"
+                  )}
                   onClick={() => handleSelect(client)}
                 >
-                  <span className="font-medium text-gray-900">
+                  <span className={cn("font-medium", isDark ? "text-white" : "text-gray-900")}>
                     {[client.nombre, client.apellido].filter(Boolean).join(" ") || "Sin nombre"}
                   </span>
-                  <span className="text-xs text-gray-500">
+                  <span className={cn("text-xs", isDark ? "text-gray-400" : "text-gray-500")}>
                     ID: {client.id}
                     {client.email ? ` · ${client.email}` : ""}
                   </span>

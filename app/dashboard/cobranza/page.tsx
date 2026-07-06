@@ -7,11 +7,16 @@ import React, {
   useMemo,
 } from "react";
 import s from "./cobranza.module.css";
-import Drawer from "@mui/material/Drawer";
 import { Gasto } from "@/types/cobranza";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +31,7 @@ import { useVentas } from "@/hooks/useVentas";
 import { useCarrito } from "@/hooks/useCarrito";
 import { useCliente } from "@/hooks/useCliente";
 import { usePago } from "@/hooks/usePago";
+import ClientSearchSelect from "@/components/molecules/ClientSearchSelect/ClientSearchSelect";
 // Constantes y utilidades
 import {
   METODOS_PAGO,
@@ -57,7 +63,7 @@ function Cobranza() {
     (typeof METODOS_PAGO)[keyof typeof METODOS_PAGO]
   >(VALORES_DEFECTO.METODO_PAGO);
   const [paymentReference, setPaymentReference] = useState("");
-  const [searchUserId, setSearchUserId] = useState("");
+  const [selectedClienteId, setSelectedClienteId] = useState("");
   const [montoApertura, setMontoApertura] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [gastosForm, setGastosForm] = useState<GastoFormData>({
@@ -122,7 +128,7 @@ function Cobranza() {
     estaEnCarrito,
   } = useCarrito();
 
-  const { cliente, buscarCliente, limpiarCliente } = useCliente();
+  const { cliente, buscarCliente, limpiarCliente, isLoading: isLoadingCliente } = useCliente();
 
   const { isLoading: isLoadingPago, procesarPago } = usePago();
 
@@ -155,25 +161,34 @@ function Cobranza() {
       try {
         const parsedUser = JSON.parse(selectedUser);
         if (Array.isArray(parsedUser) && parsedUser.length > 0) {
-          buscarCliente(parsedUser[0]?.id?.toString() || "");
+          const clienteId = parsedUser[0]?.id?.toString() || "";
+          setSelectedClienteId(clienteId);
+          buscarCliente(clienteId);
           setOpenVenta(true);
           setTabNew(TABS_VENTA.PAQUETE);
         }
-      } catch (err) {
-        console.error("Error parsing selectedUser:", err);
+      } catch {
       }
     }
   }, [isOpenCaja, buscarCliente]);
 
   // Funciones de manejo de cliente
-  const handleBuscarCliente = useCallback(
-    async (userId: string) => {
+  const handleClienteSelectChange = useCallback(
+    async (clientId: string) => {
+      setSelectedClienteId(clientId);
+
+      if (!clientId) {
+        limpiarCliente();
+        return;
+      }
+
       if (carrito.length > 0) {
         limpiarCarrito();
       }
-      await buscarCliente(userId);
+
+      await buscarCliente(clientId);
     },
-    [carrito.length, buscarCliente, limpiarCarrito]
+    [carrito.length, buscarCliente, limpiarCliente, limpiarCarrito]
   );
 
   const openDrawerVenta = useCallback(() => {
@@ -186,7 +201,7 @@ function Cobranza() {
     limpiarCliente();
     setPaymentReference("");
     setPaymentMethod(VALORES_DEFECTO.METODO_PAGO);
-    setSearchUserId("");
+    setSelectedClienteId("");
     sessionStorage.removeItem(STORAGE_KEYS.SELECTED_USER);
     setOpenVenta(false);
   }, [limpiarCarrito, limpiarCliente]);
@@ -244,7 +259,7 @@ function Cobranza() {
       limpiarCliente();
       setPaymentReference("");
       setPaymentMethod(VALORES_DEFECTO.METODO_PAGO);
-      setSearchUserId("");
+      setSelectedClienteId("");
       sessionStorage.removeItem(STORAGE_KEYS.SELECTED_USER);
     }
   }, [
@@ -449,27 +464,18 @@ function Cobranza() {
         </DialogContent>
       </Dialog>
 
-      {/* Drawer Nueva Venta */}
-      <Drawer
-        anchor="right"
-        open={openVenta}
-        onClose={() => setOpenVenta(false)}
-      >
-        <div className="w-full sm:w-96 md:w-[420px] h-full p-4 sm:p-6 bg-gray-800 outline outline-black/5 font-roboto text-white overflow-y-auto">
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl sm:text-2xl font-semibold text-white">
-                Crear Venta
-              </h2>
-              <button
-                onClick={() => setOpenVenta(false)}
-                className="text-gray-400 hover:text-white transition-colors p-1"
-                aria-label="Cerrar"
-              >
-                <i className="fa-solid fa-times text-xl"></i>
-              </button>
-            </div>
-            <div>
+      {/* Sheet Nueva Venta */}
+      <Sheet open={openVenta} onOpenChange={setOpenVenta}>
+        <SheetContent
+          side="right"
+          className="w-full sm:w-96 md:w-[420px] sm:max-w-[420px] p-4 sm:p-6 bg-gray-800 outline outline-black/5 font-roboto text-white border-gray-700 overflow-y-auto [&>button]:text-gray-400 [&>button]:hover:text-white"
+        >
+          <SheetHeader className="mb-6 text-left">
+            <SheetTitle className="text-xl sm:text-2xl font-semibold text-white">
+              Crear Venta
+            </SheetTitle>
+          </SheetHeader>
+          <div>
               <nav className="flex border-gray-700 border rounded-lg h-11 items-center justify-center relative bg-gray-700/50">
                 <div className="w-full text-center relative h-full flex items-center justify-center text-white bg-gray-600 font-medium">
                   Paquete
@@ -478,52 +484,18 @@ function Cobranza() {
               <div>
                 {tab === TABS_VENTA.PAQUETE && (
                   <div className="flex flex-col mt-4">
-                    <form
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        const userId = (
-                          e.currentTarget.userId as HTMLInputElement
-                        ).value;
-                        setSearchUserId(userId);
-                        handleBuscarCliente(userId);
-                      }}
-                      className="mb-4"
-                    >
+                    <div className="mb-4">
                       <label className="block mb-2 text-gray-300 text-sm font-medium">
                         Buscar Cliente
                       </label>
-                      <div className="w-full h-11 border border-gray-700 rounded-lg flex items-center p-3 bg-gray-700/30 focus-within:border-gray-600 focus-within:bg-gray-700/50 transition-colors">
-                        <input
-                          type="number"
-                          pattern="[0-9]*"
-                          name="userId"
-                          required
-                          value={searchUserId}
-                          onChange={(e) => setSearchUserId(e.target.value)}
-                          placeholder="ID del cliente"
-                          className="bg-transparent border-none outline-none w-full h-full text-white placeholder-gray-500 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-moz-appearance:textfield]"
-                        />
-                        <button
-                          type="submit"
-                          className="text-gray-400 hover:text-white transition-colors ml-2"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            strokeWidth={1.5}
-                            stroke="currentColor"
-                            className="size-5"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
-                            />
-                          </svg>
-                        </button>
-                      </div>
-                    </form>
+                      <ClientSearchSelect
+                        value={selectedClienteId}
+                        onChange={handleClienteSelectChange}
+                        disabled={isLoadingCliente || isLoadingPago}
+                        placeholder="Buscar por nombre o ID..."
+                        variant="dark"
+                      />
+                    </div>
                     {cliente && (
                       <div className="flex flex-col space-y-4">
                         <div className="bg-gray-700/50 rounded-lg p-4">
@@ -632,7 +604,6 @@ function Cobranza() {
                 )}
               </div>
             </div>
-          </div>
           {carrito.length > 0 && (
             <div className="flex flex-col mt-6 bg-gray-700/70 p-4 rounded-lg border border-gray-600">
               <div className="flex items-center gap-2 mb-4">
@@ -808,30 +779,20 @@ function Cobranza() {
               Cancelar
             </button>
           </div>
-        </div>
-      </Drawer>
+        </SheetContent>
+      </Sheet>
 
-      {/* Drawer Nuevo Gasto */}
-      <Drawer
-        anchor="right"
-        open={openGasto}
-        onClose={() => setOpenGasto(false)}
-      >
-        <div className="w-full sm:w-96 md:w-[420px] h-full p-4 sm:p-6 bg-white overflow-y-auto">
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl sm:text-2xl font-semibold text-gray-900">
-                Nuevo Gasto
-              </h2>
-              <button
-                onClick={() => setOpenGasto(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors p-1"
-                aria-label="Cerrar"
-              >
-                <i className="fa-solid fa-times text-xl"></i>
-              </button>
-            </div>
-          </div>
+      {/* Sheet Nuevo Gasto */}
+      <Sheet open={openGasto} onOpenChange={setOpenGasto}>
+        <SheetContent
+          side="right"
+          className="w-full sm:w-96 md:w-[420px] sm:max-w-[420px] p-4 sm:p-6 bg-white overflow-y-auto"
+        >
+          <SheetHeader className="mb-6 text-left">
+            <SheetTitle className="text-xl sm:text-2xl font-semibold text-gray-900">
+              Nuevo Gasto
+            </SheetTitle>
+          </SheetHeader>
           <form onSubmit={(e) => HandleSubmitGasto(e)} className="space-y-4">
             <div>
               <label className="block mb-2 text-sm font-medium text-gray-700">
@@ -952,8 +913,8 @@ function Cobranza() {
               </div>
             )}
           </form>
-        </div>
-      </Drawer>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

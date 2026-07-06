@@ -148,8 +148,7 @@ export function useGastos(options: UseGastosOptions = {}): UseGastosReturn {
    */
   useEffect(() => {
     if (autoLoad && userId) {
-      obtenerGastosDelDia(userId, fecha).catch((err) => {
-        console.error("Error loading gastos:", err);
+      obtenerGastosDelDia(userId, fecha).catch(() => {
       });
     }
   }, [autoLoad, userId, fecha, obtenerGastosDelDia]);

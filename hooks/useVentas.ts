@@ -75,7 +75,6 @@ export function useVentas(options: UseVentasOptions = {}): UseVentasReturn {
   useEffect(() => {
     if (autoLoad && userId) {
       obtenerTransaccionesDelDia(userId, fecha).catch((err) => {
-        console.error("Error loading ventas:", err);
         toast({
           title: "Error al cargar ventas",
           description: err instanceof Error ? err.message : "No se pudieron cargar las ventas del día",

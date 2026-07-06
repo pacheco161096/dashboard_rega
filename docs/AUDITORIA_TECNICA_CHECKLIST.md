@@ -2,7 +2,7 @@
 
 > Checklist de seguimiento para deuda técnica, mejoras de flujo, manejo de escenarios y optimización.  
 > Basado en la revisión del proyecto (lint/build OK, tests 0%).  
-> **Última actualización:** Julio 2026 (incluye avances FE: auth/roles, guards, tickets, APIs centralizadas)
+> **Última actualización:** Julio 2026 (incluye avances FE: clientes optimizados, modales lazy, eliminar cliente, APIs centralizadas)
 
 ---
 
@@ -56,8 +56,15 @@
 - [x] **Login duplicado** (`/dashboard/login`)
   - [x] Redirige a `/` (login real está en raíz)
 
-- [x] **Cobranza → tab Producto**
-  - [x] Tab Producto oculto hasta tener API (solo flujo Paquete)
+- [x] **Cobranza → venta por Producto (oculto / sin API)**
+  - [x] Tab **Producto** oculto en panel **Crear Venta** — solo se muestra **Paquete** como pestaña fija
+  - [x] Al abrir venta se fuerza `TABS_VENTA.PAQUETE` (`openDrawerVenta`, navegación desde Clientes)
+  - [x] Flujo **Paquete** operativo: buscar cliente por ID → facturas pendientes → carrito → pago
+  - [ ] Botón **“Crear producto”** en pantalla principal de Cobranza — visible pero **sin implementar** (placeholder; opcional ocultar en FE)
+  - [ ] Tab **Producto** en Crear Venta — reactivar cuando exista API de catálogo/búsqueda de productos
+  - [ ] CRUD catálogo de productos (crear, listar, buscar) — requiere endpoints en CMS/BUSINESS
+  - [ ] Agregar productos sueltos al carrito (distinto a facturas de paquete) — requiere API + UI
+  - [ ] Constante `VALORES_DEFECTO.TAB_VENTA` sigue en `PRODUCTO` (`constants/cobranza.ts`); al reactivar tab, alinear default o forzar Paquete explícitamente
 
 - [x] **TicketTracker — actualizar ticket**
   - [x] Enviar campo `actualizacion` en el payload al actualizar
@@ -106,7 +113,7 @@
   - [x] `ticketService` usa `businessApi` + `handleApiError`
   - [x] `UsuariosService` usa `businessApi` (login, CRUD, técnicos)
   - [x] `CustomerForm` / `CreateCustomer` usan `businessApi`
-  - [ ] Revisar si quedan llamadas axios directas residuales
+  - [x] Sin llamadas `axios` directas fuera de `lib/api/config.ts` (verificado)
 
 - [x] **Unificar backend de usuarios/técnicos (FE)**
   - [x] Login / Usuarios / Técnicos / Tickets → BUSINESS API (`monkfish-app`)
@@ -124,10 +131,11 @@
 
 ### 1.4 Datos huérfanos en el repositorio
 
-- [ ] Revisar y remover `app/dashboard/clientes.json` (~47k líneas, no usado en runtime)
-- [ ] Revisar y remover `app/dashboard/clientesDepurados.json` (~3.7k líneas, no usado en runtime)
+- [ ] Revisar y remover `app/dashboard/clientes.json` (~47k líneas, no usado en runtime) — ignorado en git; archivos locales conservados
+- [ ] Revisar y remover `app/dashboard/clientesDepurados.json` (~3.7k líneas, no usado en runtime) — ignorado en git
 - [ ] Verificar que no contengan PII expuesta en el repo
-- [ ] Agregar a `.gitignore` si deben conservarse solo en local
+- [x] Agregar a `.gitignore` si deben conservarse solo en local
+- [x] Sacar del índice de git (`git rm --cached`) para que no se publiquen en el repo
 
 ---
 
@@ -167,6 +175,8 @@
 - [x] **Reasignar técnico:** `id_tecnico` persistido en API
 - [x] **Admin post-login:** bienvenida en `/dashboard`
 - [x] **Clientes:** filtros de estatus + búsqueda en servidor (debounce 400 ms)
+- [x] **Cobranza — solo Paquete:** tab Producto oculto; venta por cliente + facturas pendientes
+- [ ] **Cobranza — Producto:** catálogo, búsqueda y venta de productos sueltos (requiere API)
 - [ ] **Clientes Cancelado:** activar cuando API soporte `estado_servicio`
 
 ### 2.3 Layout y estructura
@@ -189,8 +199,8 @@
 | CustomerForm / CreateCustomer | ✅ Toast | ✅ Toast | — |
 | Tickets crear | ✅ Toast + redirige | ✅ Toast + banner | — |
 | Tickets stats | Lista | ✅ Banner de error | — |
-| TicketTracker update | Banner verde | Inline | Reporte sí se envía |
-| TicketTracker reasignación | Banner | Inline | `id_tecnico` en API |
+| TicketTracker update | ✅ Toast | ✅ Toast destructive | — |
+| TicketTracker reasignación | ✅ Toast | ✅ Toast destructive | Campo `reasignado` en API |
 | useVentas | — | ✅ Toast en autoLoad | — |
 | useTicketForm / useTicketStats | ✅ Toast / banner | ✅ | — |
 
@@ -215,13 +225,13 @@
 - [ ] Acceso directo a `/dashboard/usuarios` sin sesión → redirect a `/`
 - [ ] Acceso con rol Cajero a `/dashboard/usuarios` → debe bloquearse
 - [ ] Logout → no debe quedar estado residual en sessionStorage / localStorage de sesión
-- [ ] Cambiar rol en header → actualmente permite escalación (corregir)
+- [x] Cambiar rol en header → selector de pruebas eliminado de `InfoClient`
 
 #### Clientes
 
 - [x] API caída → error visible con opción de reintentar
-- [ ] Crear cliente → feedback de éxito/error
-- [ ] Editar cliente → feedback de éxito/error
+- [x] Crear cliente → toast de éxito/error
+- [x] Editar cliente → toast de éxito/error
 - [ ] Cobranza sin caja abierta → mensaje claro, sin navegación rota
 - [ ] Filtro Activos / Inactivos / Todos → conteos coherentes con servidor
 - [ ] Filtro Cancelados → mensaje de “no disponible” hasta que API soporte el campo
@@ -231,9 +241,10 @@
 
 - [ ] Apertura de caja
 - [ ] Cierre de caja
-- [ ] Venta de paquete
+- [ ] Venta de paquete (flujo activo)
 - [ ] Pago con referencia inválida → mensaje al usuario
-- [ ] Tab Producto → verificar comportamiento (hoy sin implementar)
+- [x] Tab Producto → oculto en Crear Venta; solo Paquete hasta tener API
+- [ ] Botón “Crear producto” en pantalla principal → placeholder sin acción (opcional ocultar en FE)
 
 #### Tickets
 
@@ -241,7 +252,7 @@
 - [ ] Actualizar estatus + reporte → verificar persistencia en backend (`actualizacion`)
 - [x] Búsqueda por ID cliente, nombre, correo, teléfono
 - [x] Filtros En Proceso / Finalizados / Todos
-- [ ] Reasignar técnico → verificar persistencia en backend (hoy solo local)
+- [ ] Reasignar técnico → verificar persistencia en backend (`id_tecnico` ya se envía; validar en Strapi)
 - [ ] Rol Técnico: puede actualizar estatus
 - [ ] Rol Cajero: no puede actualizar estatus (según permisos)
 
@@ -264,25 +275,31 @@
 
 - [x] **Clientes:** filtros y búsqueda en servidor + campos mínimos (`customersService`, sin `populate=*`)
 - [x] **Clientes:** paginación server-side (`pagination[page]` / `pageSize` / `withCount`)
-- [x] **TicketTracker:** carga solo clientes por IDs referenciados (`fetchCustomersByIds`), no todos los usuarios
-- [ ] **ventaService:** reducir N requests en `obtenerTransaccionesDeVentas`
-- [x] **Clientes:** re-fetch solo al cerrar modal de cliente (no en cada toggle)
-- [ ] **Cobranza:** reemplazar MUI `Drawer` por Radix/shadcn `Sheet` (reducir bundle ~184 kB)
-- [ ] **Layout:** evaluar Font Awesome Pro CDN → iconos locales o lucide-react
-- [ ] Remover JSONs enormes del repo (`clientes.json`, `clientesDepurados.json`)
+  - [x] **Clientes:** fallback con caché en cliente si la API ignora paginación (`usedClientPagination` + `listCacheRef`)
+  - [x] **Clientes:** modales lazy-mount (`clientModalMounted`) + delay de desmontaje Radix (`DIALOG_UNMOUNT_DELAY_MS`) — evita error `removeChild`
+  - [x] **Clientes:** layout desktop — botón Nuevo + buscador + filtros en una fila (`customers.module.css`)
+  - [x] **Clientes:** `React.memo` en `Table`
+  - [x] **TicketTracker:** carga solo clientes por IDs referenciados (`fetchCustomersByIds`), no todos los usuarios
+  - [x] **API dev logging:** `responseLogger` resume arrays (conteo/meta) en lugar de volcar todo el payload
+  - [x] **ventaService:** reducir N requests en `obtenerTransaccionesDeVentas` — batch con `filters[idTransaccion][$in]` (chunks de 50)
+  - [x] **Clientes:** re-fetch solo al cerrar modal de cliente (no en cada toggle)
+  - [x] **Cobranza:** reemplazar MUI `Drawer` por Radix/shadcn `Sheet` — `@mui/material` y `@emotion/*` eliminados del proyecto
+  - [ ] **Layout:** evaluar Font Awesome Pro CDN → iconos locales o `lucide-react` (login, navbar, cobranza, usuarios, clientes)
+- [ ] Remover JSONs enormes del repo (`clientes.json`, `clientesDepurados.json`) — ignorados en git; pendiente borrar del historial remoto en próximo push
 
 ### 4.2 Código y arquitectura
 
 - [x] `customersService` centralizado con `businessApi` + `handleApiError`
-- [ ] Centralizar todas las llamadas API en `lib/api/config.ts` (falta `ticketService` y axios directo en páginas)
-- [ ] Unificar manejo de errores con `handleApiError` en todos los servicios
-- [ ] Implementar `RETRY_ATTEMPTS` / `RETRY_DELAY` (definidos pero no usados)
-- [ ] Reducir duplicación entre `CustomerForm` y `CreateCustomer`
-- [ ] Alinear `eslint-config-next` con Next.js 15 (`package.json`)
+- [x] Centralizar llamadas API en `lib/api/config.ts` (`businessApi`, `cmsApi`; sin axios directo en páginas)
+- [x] Unificar manejo de errores con `handleApiError` en servicios y hooks principales
+- [ ] Implementar `RETRY_ATTEMPTS` / `RETRY_DELAY` en interceptor axios (definidos en `API_CONFIG`, no usados)
+- [x] Reducir duplicación entre `CustomerForm` y `CreateCustomer` — `CreateCustomer` es wrapper ligero
+- [ ] Alinear `eslint-config-next` con Next.js 15 (`package.json` tiene Next 15.2.4 vs eslint-config-next 14.2.13)
 - [x] Eliminar `console.log` de `TicketTracker`
-- [ ] Eliminar `console.log` de producción restantes (`RegisterPay`, `customers` si aplica)
-- [ ] Considerar `React.memo` en `Table` y listas grandes
-- [ ] Flags de feature documentados: `SIMULAR_REASIGNACION`, `ESTADO_SERVICIO_API_HABILITADO`, `ROLES_PERMISSIONS_API_HABILITADO`
+- [x] Eliminar `console.*` residuales en todo el proyecto (interceptores API, hooks, páginas, componentes)
+- [x] `React.memo` en `Table` de clientes
+- [ ] Considerar `React.memo` en listas de usuarios y tickets
+- [ ] Flags de feature documentados: `ESTADO_SERVICIO_API_HABILITADO`, `ROLES_PERMISSIONS_API_HABILITADO`
 
 ---
 
@@ -303,7 +320,8 @@
 - [x] Reasignación real de técnicos (`id_tecnico` en API)
 - [ ] Activar API de roles/permisos (`ROLES_PERMISSIONS_API_HABILITADO`)
 - [ ] Activar estatus Cancelado cuando backend esté listo (`ESTADO_SERVICIO_API_HABILITADO`)
-- [x] Ocultar tab Producto en cobranza
+- [x] Ocultar tab Producto en cobranza (detalle en §1.2 Cobranza → venta por Producto)
+- [ ] Reactivar tab Producto + catálogo cuando API esté lista
 - [x] Contenido / redirect útil en `/dashboard`
 - [x] Feedback consistente (toasts) en formularios de cliente
 - [x] Limpiar componentes legacy (`RegisterPay`, `UpdateCustomer`, stub login)
@@ -311,9 +329,11 @@
 ### Fase 3 — Calidad y rendimiento
 
 - [ ] Tests E2E: login, permisos, caja, pago, tickets, roles
-- [ ] Paginación server-side en clientes
+- [x] Paginación server-side en clientes (+ fallback caché cliente)
 - [ ] Remover JSONs con PII del repo
 - [ ] Alinear dependencias (eslint-config-next 15)
+- [x] Reemplazar MUI Drawer por shadcn Sheet en cobranza
+- [x] Refactor `CreateCustomer` → wrapper de `CustomerForm`
 
 ---
 
@@ -326,38 +346,70 @@ Resumen de lo ya implementado en ese chat, para no reabrir trabajo hecho:
 | Búsqueda tickets | ID, cliente, nombre, correo, teléfono, descripción | — |
 | Filtros tickets | En Proceso / Finalizados / Todos (misma fila) | — |
 | Técnicos | Carga desde API, nombre visible | Unificar CMS vs BUSINESS API |
-| Reasignación | UI + simulación `localStorage` | API real (`reasignado`, `id_tecnico`) |
+| Reasignación | UI + `id_tecnico` en API + toast | Campo `reasignado` en backend |
 | Clientes filtros | Activos / Inactivos / Cancelados / Todos | Activar Cancelado en API |
-| Clientes carga | Filtro/búsqueda servidor, campos mínimos | Paginación server-side |
+| Clientes carga | Filtro/búsqueda servidor, paginación, caché, modales lazy | — |
 | TicketTracker clientes | Solo por IDs del ticket | — |
-| Roles y permisos | UI CRUD + `localStorage` + integración `getUserPermissions` | API backend + guards de ruta |
-| Feedback clientes | `fetchError` visible + reintentar | Toasts en create/edit |
+| Roles y permisos | UI CRUD + `localStorage` + guards de ruta | API backend |
+| Feedback clientes | `fetchError` + toasts create/edit + eliminar con confirmación | — |
 
 ---
 
 ## 7. Archivos clave para revisión
 
 ```
+middleware.ts                                         # Auth server (raíz)
+lib/auth/session.ts                                   # Cookie + sessionStorage
 app/page.tsx                                          # Login
-app/middleware.tsx                                    # Auth server (ubicación incorrecta)
-components/ProtectedRoute.tsx                         # Auth client
+components/ProtectedRoute.tsx                         # Auth client + permisos por ruta
 lib/roles.ts                                          # RBAC + rolesPermissionsService
 lib/utils/rolesPermissionsConfig.ts                   # Flags y mapeo de permisos
 lib/services/rolesPermissionsService.ts               # Persistencia roles (localStorage)
 components/molecules/RolesPermissions/                # UI Roles y permisos
-lib/api/config.ts                                     # API central
-lib/services/customersService.ts                      # Lista/filtros clientes optimizados
+lib/api/config.ts                                     # API central (businessApi, cmsApi)
+lib/services/customersService.ts                      # Lista/filtros/paginación clientes
 lib/utils/customerServiceStatus.ts                    # Estatus servicio + flag Cancelado
 components/molecules/ServiceStatusBadge/              # Badge de estatus
-app/dashboard/customers/page.tsx                      # Clientes
-app/dashboard/cobranza/page.tsx                       # Cobranza
+components/molecules/ConfirmActionModal/              # Modal confirmación reutilizable
+app/dashboard/customers/page.tsx                    # Clientes (paginación, lazy modals)
+app/dashboard/cobranza/page.tsx                       # Cobranza (Sheet; tab Paquete activo, Producto oculto)
 app/dashboard/reportes/page.tsx                       # Tickets
 app/dashboard/usuarios/page.tsx                       # Usuarios + Roles
 components/molecules/TicketTracker/TicketTracker.tsx  # Seguimiento / reasignación
-components/molecules/InfoClient/                      # Header usuario / selector rol
-lib/ticketService.ts                                  # Tickets (URL aún hardcodeada)
-app/dashboard/clientes.json                           # Datos huérfanos
+components/molecules/InfoClient/                      # Header usuario / logout
+lib/ticketService.ts                                  # Tickets vía businessApi
+lib/services/ventaService.ts                          # Transacciones en batch ($in)
+app/dashboard/clientes.json                           # Datos huérfanos (eliminar)
+app/dashboard/clientesDepurados.json                  # Datos huérfanos (eliminar)
 ```
+
+---
+
+## 8. Próximo sprint — solo Frontend (sin depender de backend)
+
+### Completado en sprint actual
+
+| # | Tarea | Estado |
+|---|---|---|
+| 1 | JSONs PII en `.gitignore` + `git rm --cached` | [x] |
+| 2 | Cobranza: MUI Drawer → shadcn Sheet | [x] |
+| 3 | `CreateCustomer` → wrapper de `CustomerForm` | [x] |
+
+### Pendiente — orden sugerido
+
+| # | Tarea | Impacto | Esfuerzo | Notas |
+|---|---|---|---|---|
+| 4 | `ventaService`: batch de transacciones (1 request con `$in`) | Performance cobranza | Medio | [x] `obtenerTransaccionesPorIds` con chunks de 50 |
+| 5 | Retry en interceptor axios (`RETRY_ATTEMPTS`) | Resiliencia red | Bajo | Ya definido en `API_CONFIG` |
+| 6 | Alinear `eslint-config-next` a v15 | Mantenimiento | Bajo | Next 15.2.4 vs eslint-config-next 14.2.13 |
+| 7 | Limpiar `console.*` en todo el proyecto | Limpieza | Bajo | [x] Sin `console` en código fuente TS/TSX |
+| 8 | Font Awesome CDN → `lucide-react` | Carga inicial | Medio-Alto | login, navbar, cobranza, usuarios, clientes |
+| 9 | Ocultar botón “Crear producto” (placeholder Cobranza) | UX / claridad | Bajo | Evita confusión hasta tener API de productos |
+| 10 | Setup tests E2E (Playwright) | Calidad | Alto | login, permisos, caja, pago paquete, tickets |
+| 11 | `React.memo` en tablas de usuarios/tickets | Re-renders | Bajo | Opcional tras medir |
+| 12 | Commit/push para quitar JSONs del remoto | Seguridad | Bajo | Tras `git rm --cached`, falta commit |
+
+**Bloqueados por backend** (no avanzar solo en FE): login POST/httpOnly, `ROLES_PERMISSIONS_API_HABILITADO`, `ESTADO_SERVICIO_API_HABILITADO`, campo `reasignado` en tickets, **catálogo y venta por Producto en Cobranza**.
 
 ---
 
@@ -366,8 +418,8 @@ app/dashboard/clientes.json                           # Datos huérfanos
 - Marca cada ítem con `[x]` al completarlo.
 - Prioridad sugerida: **Fase 1 → Fase 2 → Fase 3**.
 - Flags de feature a vigilar al integrar backend:
-  - `SIMULAR_REASIGNACION` en `TicketTracker.tsx`
   - `ESTADO_SERVICIO_API_HABILITADO` en `customerServiceStatus.ts`
   - `ROLES_PERMISSIONS_API_HABILITADO` en `rolesPermissionsConfig.ts`
+- Dependencias pesadas: Font Awesome Pro CDN (candidato a `lucide-react`); MUI ya removido
 - Este documento no reemplaza validación en backend; el frontend depende de que el API también valide roles y permisos.
 )

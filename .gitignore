@@ -34,3 +34,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# datos locales con PII — no publicar en el repositorio
+app/dashboard/clientes.json
+app/dashboard/clientesDepurados.json

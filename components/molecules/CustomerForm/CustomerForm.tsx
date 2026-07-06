@@ -296,6 +296,16 @@ export const CustomerForm: FC<CustomerFormProps> = ({
     });
   };
 
+  const handleOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      if (!nextOpen) {
+        setIsLoading(false);
+      }
+      onOpenChange(nextOpen);
+    },
+    [onOpenChange]
+  );
+
   const handleSubmit = useCallback(
     async (event: React.FormEvent) => {
       event.preventDefault();
@@ -380,10 +390,6 @@ export const CustomerForm: FC<CustomerFormProps> = ({
         setErrors({});
         onOpenChange(false);
       } catch (error) {
-        console.error(
-          `Error al ${mode === "create" ? "crear" : "actualizar"} usuario:`,
-          error
-        );
         toast({
           title: mode === "create" ? "Error al crear cliente" : "Error al actualizar cliente",
           description:
@@ -430,7 +436,7 @@ export const CustomerForm: FC<CustomerFormProps> = ({
 
   return (
     <div className={s.container}>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>
@@ -473,7 +479,7 @@ export const CustomerForm: FC<CustomerFormProps> = ({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => onOpenChange(false)}
+                onClick={() => handleOpenChange(false)}
                 disabled={isLoading}
               >
                 Cancelar
