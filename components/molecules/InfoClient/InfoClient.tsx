@@ -5,9 +5,9 @@ import s from "../../../app/global.module.css";
 import { useRouter } from "next/navigation";
 import { getRoleDisplayName } from "@/lib/roles";
 import {
-  clearSession,
   getSessionUser,
   isCajaOpen,
+  redirectToLogin,
   type SessionUser,
 } from "@/lib/auth/session";
 import { ConfirmActionModal } from "@/components/molecules/ConfirmActionModal/ConfirmActionModal";
@@ -38,9 +38,8 @@ export default function InfoClient() {
       return;
     }
 
-    clearSession();
     setIsModalSession(false);
-    router.replace("/");
+    redirectToLogin();
   };
 
   const goToCobranza = () => {

@@ -12,15 +12,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <head>
-        <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v6.0.0-beta3/css/all.css" />
-        <link href="https://fonts.cdnfonts.com/css/sf-pro-display" rel="stylesheet" />
-      </head>
+    <html lang="es">
       <body className="antialiased font-roboto">
+        <link
+          rel="stylesheet"
+          href="https://pro.fontawesome.com/releases/v6.0.0-beta3/css/all.css"
+          precedence="default"
+        />
+        <link
+          href="https://fonts.cdnfonts.com/css/sf-pro-display"
+          rel="stylesheet"
+          precedence="default"
+        />
         {children}
       </body>
     </html>
   );
 }
-
