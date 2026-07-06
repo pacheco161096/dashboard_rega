@@ -1,3 +1,5 @@
+import type { RolePermissionsMap } from "@/types/rolesPermissions";
+
 export type FieldErrors = Record<string, string>;
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -108,7 +110,7 @@ export function validateUsuarioForm(
 }
 
 export function countEnabledPermissions(
-  permissions: Record<string, Record<string, boolean>>
+  permissions: RolePermissionsMap | Record<string, Record<string, boolean>>
 ): number {
   return Object.values(permissions).reduce((total, modulePermissions) => {
     return (
@@ -121,7 +123,7 @@ export function validateRoleForm(
   data: {
     name: string;
     description: string;
-    permissions: Record<string, Record<string, boolean>>;
+    permissions: RolePermissionsMap | Record<string, Record<string, boolean>>;
   },
   options: { requireName: boolean }
 ): FieldErrors {

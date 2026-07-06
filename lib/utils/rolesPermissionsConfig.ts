@@ -144,19 +144,23 @@ export function flatPermissionsToModuleMap(flat: FlatPermissions): RolePermissio
 }
 
 export function moduleMapToFlatPermissions(modules: RolePermissionsMap): FlatPermissions {
+  const moduleView = (id: ModuleId) => modules[id]?.view ?? false;
+  const moduleAction = (id: ModuleId, action: PermissionAction) =>
+    modules[id]?.[action] ?? false;
+
   return {
-    canAccessInicio: modules.inicio.view,
-    canAccessClientes: modules.clientes.view,
-    canAccessCobranza: modules.cobranza.view,
-    canAccessReportes: modules.reportes.view,
-    canAccessUsuarios: modules.usuarios.view,
-    canCreateClient: modules.clientes.create,
-    canEditClient: modules.clientes.edit,
-    canDeleteClient: modules.clientes.delete,
-    canCreateTicket: modules.reportes.create,
-    canUpdateTicketStatus: modules.reportes.edit,
-    canViewTicketDetails: modules.reportes.view,
-    canCreateReport: modules.clientes.create,
+    canAccessInicio: moduleView("inicio"),
+    canAccessClientes: moduleView("clientes"),
+    canAccessCobranza: moduleView("cobranza"),
+    canAccessReportes: moduleView("reportes"),
+    canAccessUsuarios: moduleView("usuarios"),
+    canCreateClient: moduleAction("clientes", "create"),
+    canEditClient: moduleAction("clientes", "edit"),
+    canDeleteClient: moduleAction("clientes", "delete"),
+    canCreateTicket: moduleAction("reportes", "create"),
+    canUpdateTicketStatus: moduleAction("reportes", "edit"),
+    canViewTicketDetails: moduleView("reportes"),
+    canCreateReport: moduleAction("clientes", "create"),
   };
 }
 

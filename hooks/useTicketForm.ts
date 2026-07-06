@@ -77,7 +77,6 @@ export const useTicketForm = (): UseTicketFormReturn => {
       });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Error al crear el ticket";
-      console.error("Error al crear el ticket:", err);
       setError(message);
       toast({
         title: "Error al crear el ticket",

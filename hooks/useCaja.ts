@@ -41,8 +41,7 @@ export function useCaja(): UseCajaReturn {
         } else {
           setIsOpenCaja(false);
         }
-      } catch (err) {
-        console.error("Error parsing caja from storage:", err);
+      } catch {
         setIsOpenCaja(false);
         setCaja(null);
       }

@@ -13,6 +13,44 @@ import {
   StrapiCollectionResponse,
 } from "@/types/cobranza";
 
+const TRANSACCIONES_BATCH_SIZE = 50;
+
+type TransaccionStrapiItem = {
+  attributes: Transaccion;
+};
+
+function dedupeTransacciones(transacciones: Transaccion[]): Transaccion[] {
+  return transacciones.filter(
+    (transaccion, index, self) =>
+      index ===
+      self.findIndex(
+        (item) =>
+          item.idTransaccion === transaccion.idTransaccion &&
+          item.idProducto === transaccion.idProducto
+      )
+  );
+}
+
+function chunkIds(ids: number[], size: number): number[][] {
+  const chunks: number[][] = [];
+  for (let i = 0; i < ids.length; i += size) {
+    chunks.push(ids.slice(i, i + size));
+  }
+  return chunks;
+}
+
+function buildTransaccionesByIdsQuery(ids: number[]): string {
+  const query = new URLSearchParams();
+
+  ids.forEach((id, index) => {
+    query.append(`filters[idTransaccion][$in][${index}]`, String(id));
+  });
+
+  query.append("pagination[pageSize]", String(Math.max(ids.length, 25)));
+
+  return query.toString();
+}
+
 /**
  * Servicio para gestionar operaciones relacionadas con ventas y transacciones
  */
@@ -55,14 +93,44 @@ export class VentaService {
     idTransaccion: number
   ): Promise<Transaccion | null> {
     try {
-      const response = await cmsApi.get<
-        StrapiCollectionResponse<{
-          attributes: Transaccion;
-        }>
-      >(`/transacciones?filters[idTransaccion][$eq]=${idTransaccion}`);
+      const [transaccion] = await this.obtenerTransaccionesPorIds([idTransaccion]);
+      return transaccion ?? null;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
 
-      const transaccion = response.data.data?.[0];
-      return transaccion?.attributes || null;
+  /**
+   * Obtiene transacciones en lote por lista de idTransaccion (1 request por chunk)
+   */
+  static async obtenerTransaccionesPorIds(
+    idTransacciones: number[]
+  ): Promise<Transaccion[]> {
+    const uniqueIds = [
+      ...new Set(
+        idTransacciones.filter((id) => Number.isFinite(id) && id > 0)
+      ),
+    ];
+
+    if (uniqueIds.length === 0) {
+      return [];
+    }
+
+    try {
+      const chunks = chunkIds(uniqueIds, TRANSACCIONES_BATCH_SIZE);
+      const chunkResults = await Promise.all(
+        chunks.map(async (chunk) => {
+          const response = await cmsApi.get<
+            StrapiCollectionResponse<TransaccionStrapiItem>
+          >(`/transacciones?${buildTransaccionesByIdsQuery(chunk)}`);
+
+          return (response.data.data || [])
+            .map((item) => item.attributes)
+            .filter(Boolean);
+        })
+      );
+
+      return dedupeTransacciones(chunkResults.flat());
     } catch (error) {
       throw handleApiError(error);
     }
@@ -77,27 +145,12 @@ export class VentaService {
     ventas: Venta[]
   ): Promise<Transaccion[]> {
     try {
-      // Obtener todas las transacciones en paralelo
-      const transaccionesPromises = ventas.map((venta) =>
-        this.obtenerTransaccion(venta.id)
-      );
+      if (ventas.length === 0) {
+        return [];
+      }
 
-      const transacciones = await Promise.all(transaccionesPromises);
-
-      // Filtrar transacciones nulas/undefined y duplicados
-      const transaccionesUnicas = transacciones.filter(
-        (transaccion, index, self) =>
-          transaccion &&
-          index ===
-            self.findIndex(
-              (t) =>
-                t &&
-                t.idTransaccion === transaccion.idTransaccion &&
-                t.idProducto === transaccion.idProducto
-            )
-      ) as Transaccion[];
-
-      return transaccionesUnicas;
+      const idTransacciones = ventas.map((venta) => venta.id);
+      return await this.obtenerTransaccionesPorIds(idTransacciones);
     } catch (error) {
       throw handleApiError(error);
     }

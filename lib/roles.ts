@@ -127,8 +127,7 @@ export function getUserRole(): string | null {
 
     const user = JSON.parse(loginUser)
     return resolveRoleId(user.role) || resolveRoleId(user.roleName) || null
-  } catch (error) {
-    console.error("Error al obtener el rol del usuario:", error)
+  } catch {
     return null
   }
 }
@@ -210,11 +209,15 @@ export function getUserPermissions(): FlatPermissions | null {
   const userRole = getUserRole()
   if (!userRole) return null
 
-  if (typeof window !== "undefined") {
-    const roleDefinition = rolesPermissionsService.getRoleById(userRole)
-    if (roleDefinition) {
-      return moduleMapToFlatPermissions(roleDefinition.permissions)
+  try {
+    if (typeof window !== "undefined") {
+      const roleDefinition = rolesPermissionsService.getRoleById(userRole)
+      if (roleDefinition?.permissions) {
+        return moduleMapToFlatPermissions(roleDefinition.permissions)
+      }
     }
+  } catch {
+    // Fallback a permisos por defecto del rol de sistema
   }
 
   return ROLE_PERMISSIONS[userRole as UserRole] || null
@@ -264,7 +267,33 @@ export function getRedirectPathByRole(role: string | null): string {
   }
 }
 
+/** Orden de rutas al resolver redirección por permisos */
+const ALLOWED_ROUTE_PRIORITY: Array<{
+  path: string;
+  permission: keyof FlatPermissions;
+}> = [
+  { path: "/dashboard", permission: "canAccessInicio" },
+  { path: "/dashboard/customers", permission: "canAccessClientes" },
+  { path: "/dashboard/cobranza", permission: "canAccessCobranza" },
+  { path: "/dashboard/reportes", permission: "canAccessReportes" },
+  { path: "/dashboard/usuarios", permission: "canAccessUsuarios" },
+];
+
+/** Primera ruta del dashboard permitida según permisos efectivos */
+export function getFirstAllowedPath(permissions: FlatPermissions): string {
+  for (const route of ALLOWED_ROUTE_PRIORITY) {
+    if (permissions[route.permission] === true) {
+      return route.path;
+    }
+  }
+  return "/";
+}
+
 /** Primera ruta permitida para el usuario autenticado actual */
 export function getDefaultAllowedPath(): string {
+  const permissions = getUserPermissions()
+  if (permissions) {
+    return getFirstAllowedPath(permissions)
+  }
   return getRedirectPathByRole(getUserRole())
 }

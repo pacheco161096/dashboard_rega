@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  getDefaultAllowedPath,
+  getFirstAllowedPath,
   getRoutePermissionKey,
   getUserPermissions,
 } from '@/lib/roles';
@@ -16,16 +16,25 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    setIsReady(false);
-
     if (!isAuthenticated()) {
+      setIsReady(false);
       clearSession();
       router.replace('/');
       return;
     }
 
-    const permissions = getUserPermissions();
+    let permissions;
+    try {
+      permissions = getUserPermissions();
+    } catch {
+      setIsReady(false);
+      clearSession();
+      router.replace('/');
+      return;
+    }
+
     if (!permissions) {
+      setIsReady(false);
       clearSession();
       router.replace('/');
       return;
@@ -33,12 +42,14 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
     const permissionKey = getRoutePermissionKey(pathname);
     if (permissionKey && permissions[permissionKey] !== true) {
+      setIsReady(false);
+      const fallback = getFirstAllowedPath(permissions);
       toast({
-        title: "Acceso denegado",
-        description: "No tienes permiso para acceder a este módulo",
-        variant: "destructive",
+        title: 'Acceso denegado',
+        description: 'No tienes permiso para acceder a este módulo',
+        variant: 'destructive',
       });
-      router.replace(getDefaultAllowedPath());
+      router.replace(fallback !== pathname ? fallback : '/');
       return;
     }
 

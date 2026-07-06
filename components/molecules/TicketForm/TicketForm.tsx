@@ -68,8 +68,7 @@ export default function TicketForm({ handleSubmit, isLoading = false, initialCli
         }))
 
         setTecnicos(tecnicosData)
-      } catch (error) {
-        console.error("Error al cargar técnicos:", error)
+      } catch {
         setTecnicos([])
         toast({
           title: "Error al cargar técnicos",
