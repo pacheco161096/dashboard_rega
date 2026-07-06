@@ -60,6 +60,17 @@ export function clearSession() {
   clearAuthCookie();
 }
 
+/**
+ * Cierra sesión y redirige al login con recarga completa.
+ * Evita que los estilos globales se desmonten al salir del layout del dashboard.
+ */
+export function redirectToLogin() {
+  if (typeof window === "undefined") return;
+
+  clearSession();
+  window.location.replace("/");
+}
+
 export function isAuthenticated(): boolean {
   return getSessionUser() !== null;
 }

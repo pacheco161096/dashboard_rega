@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import "../globals.css";
 import { Navbar } from "@/components/molecules/Navbar/Navbar";
 import s from "../global.module.css";
 import ProtectedRoute from "@/components/ProtectedRoute";

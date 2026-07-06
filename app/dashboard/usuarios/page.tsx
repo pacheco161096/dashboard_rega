@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast"
 import { getAllRolesForSelect, getRoleDisplayName, resolveRoleId, ROLES_ARRAY } from "@/lib/roles"
 import type { RoleSelectOption } from "@/types/rolesPermissions"
 import { handleApiError } from "@/lib/api/config"
+import { PasswordInput } from "@/components/ui/password-input"
 import { ConfirmActionModal } from "@/components/molecules/ConfirmActionModal/ConfirmActionModal"
 import {
   firstFieldErrorMessage,
@@ -396,9 +397,8 @@ export default function Usuarios() {
           Contraseña {!isEditing && <span className="text-red-500">*</span>}
           {isEditing && <span className="text-xs text-gray-500"> (dejar vacío para no cambiar)</span>}
         </Label>
-        <Input
+        <PasswordInput
           id="password"
-          type="password"
           placeholder={isEditing ? "Nueva contraseña (opcional)" : "Ingrese la contraseña"}
           value={formData.password}
           onChange={(e) => handleInputChange("password", e.target.value)}

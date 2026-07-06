@@ -7,7 +7,7 @@ import {
   getRoutePermissionKey,
   getUserPermissions,
 } from '@/lib/roles';
-import { clearSession, isAuthenticated } from '@/lib/auth/session';
+import { isAuthenticated, redirectToLogin } from '@/lib/auth/session';
 import { toast } from '@/hooks/use-toast';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -18,8 +18,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     if (!isAuthenticated()) {
       setIsReady(false);
-      clearSession();
-      router.replace('/');
+      redirectToLogin();
       return;
     }
 
@@ -28,15 +27,13 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       permissions = getUserPermissions();
     } catch {
       setIsReady(false);
-      clearSession();
-      router.replace('/');
+      redirectToLogin();
       return;
     }
 
     if (!permissions) {
       setIsReady(false);
-      clearSession();
-      router.replace('/');
+      redirectToLogin();
       return;
     }
 

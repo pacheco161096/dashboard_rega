@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { getRedirectPathByRole, getRoleDisplayName, resolveRoleId } from '@/lib/roles'
 import { setSessionUser } from '@/lib/auth/session'
 import { businessApi, handleApiError } from '@/lib/api/config'
+import { PasswordInput } from '@/components/ui/password-input'
 
 interface LoginUsuarioAttributes {
   nombre?: string
@@ -125,14 +126,14 @@ const Page = () => {
               <div className='absolute left-3 top-1/2 -translate-y-1/2 text-white z-10 pointer-events-none transition-colors duration-200 group-focus-within:text-indigo-400'>
                 <i className="fa-solid fa-lock text-lg"></i>
               </div>
-              <input
+              <PasswordInput
                 id="password"
-                name='password'
-                type="password"
-                placeholder='Contraseña'
+                name="password"
+                placeholder="Contraseña"
                 required
                 autoComplete="current-password"
-                className='login-input w-full h-12 pl-11 pr-4 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200'
+                className="login-input w-full h-12 pl-11 pr-11 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                toggleClassName="text-gray-400 hover:text-indigo-400 z-10"
               />
             </div>
           </div>
