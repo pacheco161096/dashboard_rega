@@ -63,6 +63,7 @@ export default function InfoClient() {
         </div>
 
         <button
+          type="button"
           className={s.logoutButton}
           onClick={requestLogout}
           aria-label="Cerrar sesión"

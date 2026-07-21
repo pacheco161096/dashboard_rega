@@ -418,7 +418,7 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-dvh bg-gray-50 flex items-center justify-center p-4">
         <Card className="w-full max-w-2xl">
           <CardContent className="p-8 text-center">
             <Loader2 className="h-12 w-12 text-blue-600 mx-auto mb-4 animate-spin" />
@@ -431,7 +431,7 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-dvh bg-gray-50 flex items-center justify-center p-4">
         <Card className="w-full max-w-2xl">
           <CardContent className="p-8 text-center">
             <FileText className="h-12 w-12 text-red-400 mx-auto mb-4" />
@@ -447,7 +447,7 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-dvh bg-gray-50 p-4">
       <div className="max-w-6xl mx-auto">
         <Card>
           <CardHeader>
@@ -743,9 +743,9 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
                   {selectedTicket.actualizaciones && selectedTicket.actualizaciones.length > 1 ? (
                     <div className="mt-1 p-3 bg-gray-50 rounded-md min-h-[80px]">
                       <div className="space-y-2">
-                        {selectedTicket.actualizaciones.slice(1).map((actualizacion, index) => (
+                        {selectedTicket.actualizaciones.slice(1).map((actualizacion) => (
                           <div
-                            key={actualizacion.id || index + 1}
+                            key={actualizacion.id ?? `${actualizacion.fecha}-${actualizacion.descripcion}`}
                             className="pb-2 border-b border-gray-200 last:border-0 last:pb-0"
                           >
                             <div className="text-xs text-gray-500 mb-1">

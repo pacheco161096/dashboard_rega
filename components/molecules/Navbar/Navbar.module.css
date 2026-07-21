@@ -10,7 +10,8 @@
 
 /* Mobile Menu Overlay */
 .mobileOverlay {
-    @apply fixed inset-0 bg-black/50 z-40 sm:hidden;
+    @apply fixed inset-0 bg-black/50 z-40 sm:hidden border-0 p-0 cursor-pointer;
+    appearance: none;
 }
 
 /* Mobile Menu Sidebar */

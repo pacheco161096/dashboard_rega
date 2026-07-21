@@ -96,10 +96,3 @@ export function filterMatchesServiceStatus(
   if (filter === "inactivos") return status === "suspendido";
   return status === "cancelado";
 }
-
-export function filterToServiceStatus(filter: ServiceStatusFilter): ServiceStatus | null {
-  if (filter === "activos") return "activo";
-  if (filter === "inactivos") return "suspendido";
-  if (filter === "cancelados") return "cancelado";
-  return null;
-}

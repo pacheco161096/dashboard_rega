@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -55,7 +55,7 @@ interface Usuario {
 export default function Usuarios() {
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState("usuarios")
-  const [availableRoles, setAvailableRoles] = useState<RoleSelectOption[]>(
+  const [availableRoles, setAvailableRoles] = useState<RoleSelectOption[]>(() =>
     ROLES_ARRAY.map((role) => ({
       id: role.id,
       name: role.name,
@@ -65,7 +65,7 @@ export default function Usuarios() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
   const [loading, setLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
-  const [selectedUsuario, setSelectedUsuario] = useState<Usuario | null>(null)
+  const selectedUsuarioRef = useRef<Usuario | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [usuarioToDelete, setUsuarioToDelete] = useState<Usuario | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -159,7 +159,7 @@ export default function Usuarios() {
     })
     setFormErrors({})
     setIsEditing(false)
-    setSelectedUsuario(null)
+    selectedUsuarioRef.current = null
   }, [])
 
   const handleInputChange = useCallback((field: string, value: string) => {
@@ -183,7 +183,7 @@ export default function Usuarios() {
 
   // Editar usuario
   const handleEdit = (usuario: Usuario) => {
-    setSelectedUsuario(usuario)
+    selectedUsuarioRef.current = usuario
     setIsEditing(true)
     setFormData({
       nombre: usuario.nombre,
@@ -252,6 +252,7 @@ export default function Usuarios() {
   const handleUpdate = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
     
+    const selectedUsuario = selectedUsuarioRef.current
     if (!selectedUsuario) return
 
     const validationErrors = validateUsuarioForm(formData, { isEditing: true })
@@ -301,7 +302,7 @@ export default function Usuarios() {
         variant: "destructive",
       })
     }
-  }, [formData, selectedUsuario, toast, resetForm, fetchUsuarios, availableRoles])
+  }, [formData, toast, resetForm, fetchUsuarios, availableRoles])
 
   // Eliminar usuario
   const handleDelete = async () => {
@@ -471,15 +472,19 @@ export default function Usuarios() {
           <span>Nuevo Usuario</span>
         </Button>
         <div className="relative w-full sm:w-auto max-w-xl">
+          <label htmlFor="usuarios-search" className="sr-only">
+            Buscar usuarios
+          </label>
           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
             <i className="fa-solid fa-magnifying-glass text-sm"></i>
           </div>
           <input 
+            id="usuarios-search"
             onChange={(e) => handleSearch(e.target.value)} 
             placeholder="Buscar por nombre o email..." 
             type="text" 
             value={searchQuery}
-            className="block w-full h-10 pl-10 pr-4 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-700 bg-white transition-all duration-200" 
+            className="block w-full h-10 pl-10 pr-4 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-700 bg-white transition-colors duration-200" 
           />
         </div>
       </div>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useMemo, useEffect } from "react"
+import { Suspense, useState, useCallback, useMemo, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,7 +14,7 @@ import { getUserPermissions } from "@/lib/roles"
 
 type ViewType = "dashboard" | "create" | "track"
 
-export default function Reportes() {
+function ReportesContent() {
   const searchParams = useSearchParams()
   const [currentView, setCurrentView] = useState<ViewType>("dashboard")
   const [clienteId, setClienteId] = useState<string>("")
@@ -29,22 +29,23 @@ export default function Reportes() {
   } = useTicketStats()
   const permissions = getUserPermissions()
 
-  // Memoizar handlers de cambio de vista
   const handleViewChange = useCallback((view: ViewType) => {
     setCurrentView(view)
-  }, [])
+    if (view === "dashboard") {
+      refreshStats()
+    }
+  }, [refreshStats])
 
   const handleBackToDashboard = useCallback(() => {
     setCurrentView("dashboard")
-  }, [])
+    refreshStats()
+  }, [refreshStats])
 
-  // Memoizar handleSubmit
   const handleSubmit = useCallback(async (formData: TicketFormData, e: React.FormEvent) => {
     e.preventDefault()
     await submitTicket(formData)
   }, [submitTicket])
 
-  // Redirigir al dashboard y actualizar estadísticas cuando el ticket se crea exitosamente
   useEffect(() => {
     if (success) {
       refreshStats()
@@ -52,14 +53,6 @@ export default function Reportes() {
     }
   }, [success, refreshStats])
 
-  // Actualizar estadísticas cuando se vuelve al dashboard
-  useEffect(() => {
-    if (currentView === "dashboard") {
-      refreshStats()
-    }
-  }, [currentView, refreshStats])
-
-  // Verificar parámetros de URL para crear ticket con cliente pre-seleccionado
   useEffect(() => {
     const createParam = searchParams.get("create")
     const clienteIdParam = searchParams.get("clienteId")
@@ -70,7 +63,6 @@ export default function Reportes() {
     }
   }, [searchParams])
 
-  // Memoizar la vista renderizada
   const renderedView = useMemo(() => {
     switch (currentView) {
       case "create":
@@ -113,9 +105,8 @@ export default function Reportes() {
         )
       default:
         return (
-          <div className="min-h-screen bg-white p-6">
+          <div className="min-h-dvh bg-white p-6">
             <div className="w-full max-w-4xl mx-auto">
-              {/* Header */}
               <div className="text-center mb-8 pt-4">
                 <div className="flex items-center justify-center gap-3 mb-4">
                   <TicketIcon className="h-10 w-10 text-blue-600" />
@@ -124,9 +115,7 @@ export default function Reportes() {
                 <p className="text-lg text-gray-600">Gestiona y da seguimiento a tus tickets de soporte</p>
               </div>
 
-              {/* Dashboard Cards */}
               <div className={`grid gap-6 mb-8 ${permissions?.canCreateTicket ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
-                {/* Crear Nuevo Ticket - Solo visible si tiene permiso */}
                 {permissions?.canCreateTicket && (
                   <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-blue-200 flex flex-col h-full">
                     <CardHeader className="text-center pb-4 flex-1">
@@ -153,7 +142,6 @@ export default function Reportes() {
                   </Card>
                 )}
 
-                {/* Seguimiento de Tickets */}
                 <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-green-200 flex flex-col h-full">
                   <CardHeader className="text-center pb-4 flex-1">
                     <div className="flex justify-center mb-3">
@@ -185,7 +173,6 @@ export default function Reportes() {
                 </div>
               )}
 
-              {/* Stats Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                 <Card className="bg-blue-50 border-blue-200">
                   <CardContent className="p-4">
@@ -257,4 +244,18 @@ export default function Reportes() {
   }, [currentView, error, isLoading, handleSubmit, handleBackToDashboard, handleViewChange, total, enProceso, finalizados, statsLoading, statsError, clienteId, refreshStats, permissions])
 
   return <div>{renderedView}</div>
+}
+
+export default function Reportes() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-dvh flex items-center justify-center bg-white text-gray-600">
+          Cargando reportes...
+        </div>
+      }
+    >
+      <ReportesContent />
+    </Suspense>
+  )
 }

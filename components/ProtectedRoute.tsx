@@ -55,7 +55,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
   if (!isReady) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 text-gray-600">
+      <div className="min-h-dvh flex items-center justify-center bg-gray-50 text-gray-600">
         Verificando autenticación...
       </div>
     );

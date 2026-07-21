@@ -1,6 +1,6 @@
 "use client";
 
-import { FC, useState, useCallback, useEffect, useMemo } from "react";
+import { FC, useState, useCallback, useMemo } from "react";
 import s from "./CustomerForm.module.css";
 import { Button } from "@/components/ui/button";
 import { businessApi, handleApiError } from "@/lib/api/config";
@@ -258,28 +258,6 @@ export const CustomerForm: FC<CustomerFormProps> = ({
     () => !hasFieldErrors(validateCustomerForm(dataUser)),
     [dataUser]
   );
-
-  useEffect(() => {
-    if (
-      mode === "edit" &&
-      userData &&
-      Array.isArray(userData) &&
-      userData.length > 0
-    ) {
-      const userDataRaw = userData[0] as unknown as Record<
-        string,
-        string | null | undefined
-      >;
-      const sanitizedData: Record<string, string> = {};
-      Object.keys(initialUserData).forEach((key) => {
-        sanitizedData[key] = userDataRaw[key] ?? "";
-      });
-      setDataUser(sanitizedData);
-    } else {
-      setDataUser(initialUserData);
-    }
-    setErrors({});
-  }, [mode, userData, open]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;

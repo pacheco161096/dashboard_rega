@@ -11,8 +11,6 @@ const LOCAL_UI_KEYS = [
   "ticket_technician_overrides",
 ] as const;
 
-const AUTH_COOKIE_NAME = "loginUser";
-
 export interface SessionUser {
   id: number | string;
   nombre: string;
@@ -21,14 +19,26 @@ export interface SessionUser {
   roleName?: string;
 }
 
-function setAuthCookie() {
-  if (typeof document === "undefined") return;
-  document.cookie = `${AUTH_COOKIE_NAME}=1; path=/; SameSite=Lax`;
+async function setAuthCookie() {
+  try {
+    await fetch("/api/auth/session", {
+      method: "POST",
+      credentials: "same-origin",
+    });
+  } catch {
+    // El middleware fallará el gate si la cookie no se pudo fijar
+  }
 }
 
-function clearAuthCookie() {
-  if (typeof document === "undefined") return;
-  document.cookie = `${AUTH_COOKIE_NAME}=; path=/; max-age=0; SameSite=Lax`;
+async function clearAuthCookie() {
+  try {
+    await fetch("/api/auth/session", {
+      method: "DELETE",
+      credentials: "same-origin",
+    });
+  } catch {
+    // Continuar limpiando sessionStorage aunque falle la cookie
+  }
 }
 
 export function getSessionUser(): SessionUser | null {
@@ -43,13 +53,13 @@ export function getSessionUser(): SessionUser | null {
   }
 }
 
-export function setSessionUser(user: SessionUser) {
+export async function setSessionUser(user: SessionUser) {
   sessionStorage.setItem(SESSION_KEYS.LOGIN_USER, JSON.stringify(user));
-  setAuthCookie();
+  await setAuthCookie();
 }
 
 /** Limpia sesión, cookie de auth y estado residual del dashboard */
-export function clearSession() {
+export async function clearSession() {
   if (typeof window === "undefined") return;
 
   sessionStorage.removeItem(SESSION_KEYS.LOGIN_USER);
@@ -57,17 +67,17 @@ export function clearSession() {
   sessionStorage.removeItem(SESSION_KEYS.SELECTED_USER);
 
   LOCAL_UI_KEYS.forEach((key) => localStorage.removeItem(key));
-  clearAuthCookie();
+  await clearAuthCookie();
 }
 
 /**
  * Cierra sesión y redirige al login con recarga completa.
  * Evita que los estilos globales se desmonten al salir del layout del dashboard.
  */
-export function redirectToLogin() {
+export async function redirectToLogin() {
   if (typeof window === "undefined") return;
 
-  clearSession();
+  await clearSession();
   window.location.replace("/");
 }
 

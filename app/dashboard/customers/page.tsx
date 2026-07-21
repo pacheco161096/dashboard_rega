@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { Button, SearchBox, Table, CreateCustomer, CustomerForm } from "@/components/index";
+import { SearchBox, Table, CreateCustomer, CustomerForm } from "@/components/index";
+import { Button } from "@/components/ui/button";
 import s from './customers.module.css'
 import { useRouter } from "next/navigation";
 import { getUserPermissions } from "@/lib/roles";
@@ -136,7 +137,9 @@ export default function Customers() {
   const router = useRouter();
   const { toast } = useToast();
   const toastRef = useRef(toast);
-  toastRef.current = toast;
+  useEffect(() => {
+    toastRef.current = toast;
+  }, [toast]);
 
   const listCacheRef = useRef<ListCache | null>(null);
   const fetchIdRef = useRef(0);
@@ -398,6 +401,7 @@ export default function Customers() {
       )}
       {clientModalMounted && !isNewCliente && (
         <CustomerForm
+          key={`edit-${idCliente}`}
           open={clientModalOpen}
           onOpenChange={handleClientModalOpenChange}
           mode="edit"
@@ -426,7 +430,7 @@ export default function Customers() {
 
       <div className={s.header}>
         {permissions?.canCreateClient && (
-          <Button onClick={handleNewCliente} variant="primary" size="md" className={s.newClientButton}>
+          <Button type="button" onClick={handleNewCliente} className={`${s.newClientButton} bg-blue-600 hover:bg-blue-700 text-white`}>
             <i className="fa-solid fa-plus text-sm"></i>
             <span>Nuevo Cliente</span>
           </Button>
