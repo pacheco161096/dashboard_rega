@@ -7,6 +7,7 @@ export const SESSION_KEYS = {
 
 /** Claves locales de UI (tickets) que deben limpiarse al cerrar sesión */
 const LOCAL_UI_KEYS = [
+  "ticket_reassigned_ids:v1",
   "ticket_reassigned_ids",
   "ticket_technician_overrides",
 ] as const;

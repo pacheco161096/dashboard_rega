@@ -218,8 +218,8 @@ export function RolesPermissionsManager() {
 
   const permissionSummary = useMemo(() => {
     return (permissions: RolePermissionsMap) =>
-      SYSTEM_MODULE_DEFINITIONS.filter((module) => permissions[module.id].view).map(
-        (module) => module.label
+      SYSTEM_MODULE_DEFINITIONS.flatMap((module) =>
+        permissions[module.id].view ? [module.label] : []
       );
   }, []);
 

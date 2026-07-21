@@ -17,7 +17,8 @@ import { customersService } from "@/lib/services/customersService"
 import { useToast } from "@/hooks/use-toast"
 
 /** Badge "Reasignado" local hasta que la API exponga el campo `reasignado` */
-const REASSIGNED_STORAGE_KEY = "ticket_reassigned_ids"
+const REASSIGNED_STORAGE_KEY = "ticket_reassigned_ids:v1"
+const LEGACY_REASSIGNED_STORAGE_KEY = "ticket_reassigned_ids"
 
 type TicketStatusFilter = "todos" | "en_proceso" | "finalizados"
 
@@ -67,7 +68,9 @@ function getReassignButtonIcon(isReassigning: boolean, hasTecnicoChange: boolean
 function getReassignedIds(): Set<number> {
   if (typeof window === "undefined") return new Set()
   try {
-    const stored = localStorage.getItem(REASSIGNED_STORAGE_KEY)
+    const stored =
+      localStorage.getItem(REASSIGNED_STORAGE_KEY) ??
+      localStorage.getItem(LEGACY_REASSIGNED_STORAGE_KEY)
     return stored ? new Set(JSON.parse(stored) as number[]) : new Set()
   } catch {
     return new Set()
@@ -78,6 +81,7 @@ function markTicketReassigned(idReal: number) {
   const ids = getReassignedIds()
   ids.add(idReal)
   localStorage.setItem(REASSIGNED_STORAGE_KEY, JSON.stringify([...ids]))
+  localStorage.removeItem(LEGACY_REASSIGNED_STORAGE_KEY)
 }
 
 function resolveTecnicoNombre(idTecnico: string, tecnicos: Tecnico[]): string {
@@ -161,6 +165,30 @@ function matchesTicketStatus(ticket: Ticket, filter: TicketStatusFilter): boolea
   return ticket.estatus === "Finalizado"
 }
 
+function getStatusColor(status: string) {
+  return status === "En proceso"
+    ? "bg-yellow-100 text-yellow-800 border-yellow-300"
+    : "bg-green-100 text-green-800 border-green-300"
+}
+
+async function refreshTicketsList(tecnicosData: Tecnico[]) {
+  const ticketsResponse: TicketListResponse = await ticketService.getTickets()
+  const reassignedIds = getReassignedIds()
+
+  const sortedData = [...ticketsResponse.data].sort((a, b) => {
+    const dateA = new Date(a.attributes.createdAt).getTime()
+    const dateB = new Date(b.attributes.createdAt).getTime()
+    return dateB - dateA
+  })
+
+  const clientIds = sortedData.map((ticket) => ticket.attributes.id_cliente)
+  const clientesMap = await fetchClientesMap(clientIds)
+
+  return sortedData.map((ticket) =>
+    transformTicketItem(ticket, clientesMap, tecnicosData, reassignedIds)
+  )
+}
+
 export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [ticketStatusFilter, setTicketStatusFilter] = useState<TicketStatusFilter>("en_proceso")
@@ -239,24 +267,6 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
       setSelectedNewTecnico(selectedTicket.id_tecnico)
     }
   }, [selectedTicket])
-
-  const refreshTicketsList = async (tecnicosData: Tecnico[]) => {
-    const ticketsResponse: TicketListResponse = await ticketService.getTickets()
-    const reassignedIds = getReassignedIds()
-
-    const sortedData = [...ticketsResponse.data].sort((a, b) => {
-      const dateA = new Date(a.attributes.createdAt).getTime()
-      const dateB = new Date(b.attributes.createdAt).getTime()
-      return dateB - dateA
-    })
-
-    const clientIds = sortedData.map((ticket) => ticket.attributes.id_cliente)
-    const clientesMap = await fetchClientesMap(clientIds)
-
-    return sortedData.map((ticket) =>
-      transformTicketItem(ticket, clientesMap, tecnicosData, reassignedIds)
-    )
-  }
 
   const handleUpdateStatus = async () => {
     if (!selectedTicket) return
@@ -397,12 +407,6 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
   const filteredTickets = tickets.filter(
     (ticket) => matchesSearch(ticket, searchTerm) && matchesTicketStatus(ticket, ticketStatusFilter)
   )
-
-  const getStatusColor = (status: string) => {
-    return status === "En proceso"
-      ? "bg-yellow-100 text-yellow-800 border-yellow-300"
-      : "bg-green-100 text-green-800 border-green-300"
-  }
 
   const canReassign =
     selectedTicket?.estatus === "En proceso" && permissions?.canUpdateTicketStatus

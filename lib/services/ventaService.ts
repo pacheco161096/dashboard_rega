@@ -124,9 +124,9 @@ export class VentaService {
             StrapiCollectionResponse<TransaccionStrapiItem>
           >(`/transacciones?${buildTransaccionesByIdsQuery(chunk)}`);
 
-          return (response.data.data || [])
-            .map((item) => item.attributes)
-            .filter(Boolean);
+          return (response.data.data || []).flatMap((item) =>
+            item.attributes ? [item.attributes] : []
+          );
         })
       );
 

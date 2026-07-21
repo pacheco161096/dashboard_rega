@@ -1,26 +1,62 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { PersonFillIcon, SignOutIcon } from "@primer/octicons-react";
 import s from "../../../app/global.module.css";
 import { useRouter } from "next/navigation";
 import { getRoleDisplayName } from "@/lib/roles";
 import {
-  getSessionUser,
   isCajaOpen,
   redirectToLogin,
+  SESSION_KEYS,
   type SessionUser,
 } from "@/lib/auth/session";
 import { ConfirmActionModal } from "@/components/molecules/ConfirmActionModal/ConfirmActionModal";
 
+/**
+ * Cache del snapshot: useSyncExternalStore exige referencia estable
+ * (JSON.parse devolvería un objeto nuevo en cada llamada → bucle infinito).
+ */
+let cachedRaw: string | null = null;
+let cachedUser: SessionUser | null = null;
+
+/** sessionStorage no emite eventos en la misma pestaña; el logout hace full reload. */
+function subscribeToSession() {
+  return () => {};
+}
+
+function getClientSessionSnapshot(): SessionUser | null {
+  if (typeof window === "undefined") return null;
+
+  const raw = sessionStorage.getItem(SESSION_KEYS.LOGIN_USER);
+  if (raw === cachedRaw) return cachedUser;
+
+  cachedRaw = raw;
+  if (!raw) {
+    cachedUser = null;
+    return null;
+  }
+
+  try {
+    cachedUser = JSON.parse(raw) as SessionUser;
+  } catch {
+    cachedUser = null;
+  }
+  return cachedUser;
+}
+
+function getServerSessionSnapshot(): SessionUser | null {
+  return null;
+}
+
 export default function InfoClient() {
   const router = useRouter();
-  const [user, setUser] = useState<SessionUser | null>(null);
+  const user = useSyncExternalStore(
+    subscribeToSession,
+    getClientSessionSnapshot,
+    getServerSessionSnapshot
+  );
   const [isModalSession, setIsModalSession] = useState(false);
   const [isCajaBlockModal, setIsCajaBlockModal] = useState(false);
-
-  useEffect(() => {
-    setUser(getSessionUser());
-  }, []);
 
   const requestLogout = () => {
     if (isCajaOpen()) {

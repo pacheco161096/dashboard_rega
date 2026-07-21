@@ -383,34 +383,34 @@ export const CustomerForm: FC<CustomerFormProps> = ({
   );
 
   const renderFields = (section: string) =>
-    dataInput
-      .filter((item) => item.section === section)
-      .map((item) => {
-        const fieldValue = dataUser[item.name as keyof typeof dataUser];
-        const safeValue = fieldValue ?? "";
-        return (
-          <div className="space-y-2" key={item.name}>
-            <Label htmlFor={item.name}>
-              {item.placeholder}
-              {item.required && <span className="text-red-500 ml-1">*</span>}
-            </Label>
-            <Input
-              id={item.name}
-              name={item.name}
-              placeholder={item.placeholder}
-              type={item.type}
-              value={safeValue as string}
-              onChange={handleChange}
-              className={errors[item.name] ? "border-red-500" : ""}
-              disabled={isLoading}
-              aria-invalid={Boolean(errors[item.name])}
-            />
-            {errors[item.name] && (
-              <p className="text-xs text-red-600">{errors[item.name]}</p>
-            )}
-          </div>
-        );
-      });
+    dataInput.flatMap((item) => {
+      if (item.section !== section) return [];
+
+      const fieldValue = dataUser[item.name as keyof typeof dataUser];
+      const safeValue = fieldValue ?? "";
+      return [
+        <div className="space-y-2" key={item.name}>
+          <Label htmlFor={item.name}>
+            {item.placeholder}
+            {item.required && <span className="text-red-500 ml-1">*</span>}
+          </Label>
+          <Input
+            id={item.name}
+            name={item.name}
+            placeholder={item.placeholder}
+            type={item.type}
+            value={safeValue as string}
+            onChange={handleChange}
+            className={errors[item.name] ? "border-red-500" : ""}
+            disabled={isLoading}
+            aria-invalid={Boolean(errors[item.name])}
+          />
+          {errors[item.name] && (
+            <p className="text-xs text-red-600">{errors[item.name]}</p>
+          )}
+        </div>,
+      ];
+    });
 
   return (
     <div className={s.container}>
