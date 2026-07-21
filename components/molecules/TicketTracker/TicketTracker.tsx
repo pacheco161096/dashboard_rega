@@ -17,7 +17,8 @@ import { customersService } from "@/lib/services/customersService"
 import { useToast } from "@/hooks/use-toast"
 
 /** Badge "Reasignado" local hasta que la API exponga el campo `reasignado` */
-const REASSIGNED_STORAGE_KEY = "ticket_reassigned_ids"
+const REASSIGNED_STORAGE_KEY = "ticket_reassigned_ids:v1"
+const LEGACY_REASSIGNED_STORAGE_KEY = "ticket_reassigned_ids"
 
 type TicketStatusFilter = "todos" | "en_proceso" | "finalizados"
 
@@ -67,7 +68,9 @@ function getReassignButtonIcon(isReassigning: boolean, hasTecnicoChange: boolean
 function getReassignedIds(): Set<number> {
   if (typeof window === "undefined") return new Set()
   try {
-    const stored = localStorage.getItem(REASSIGNED_STORAGE_KEY)
+    const stored =
+      localStorage.getItem(REASSIGNED_STORAGE_KEY) ??
+      localStorage.getItem(LEGACY_REASSIGNED_STORAGE_KEY)
     return stored ? new Set(JSON.parse(stored) as number[]) : new Set()
   } catch {
     return new Set()
@@ -78,6 +81,7 @@ function markTicketReassigned(idReal: number) {
   const ids = getReassignedIds()
   ids.add(idReal)
   localStorage.setItem(REASSIGNED_STORAGE_KEY, JSON.stringify([...ids]))
+  localStorage.removeItem(LEGACY_REASSIGNED_STORAGE_KEY)
 }
 
 function resolveTecnicoNombre(idTecnico: string, tecnicos: Tecnico[]): string {
@@ -161,6 +165,30 @@ function matchesTicketStatus(ticket: Ticket, filter: TicketStatusFilter): boolea
   return ticket.estatus === "Finalizado"
 }
 
+function getStatusColor(status: string) {
+  return status === "En proceso"
+    ? "bg-yellow-100 text-yellow-800 border-yellow-300"
+    : "bg-green-100 text-green-800 border-green-300"
+}
+
+async function refreshTicketsList(tecnicosData: Tecnico[]) {
+  const ticketsResponse: TicketListResponse = await ticketService.getTickets()
+  const reassignedIds = getReassignedIds()
+
+  const sortedData = [...ticketsResponse.data].sort((a, b) => {
+    const dateA = new Date(a.attributes.createdAt).getTime()
+    const dateB = new Date(b.attributes.createdAt).getTime()
+    return dateB - dateA
+  })
+
+  const clientIds = sortedData.map((ticket) => ticket.attributes.id_cliente)
+  const clientesMap = await fetchClientesMap(clientIds)
+
+  return sortedData.map((ticket) =>
+    transformTicketItem(ticket, clientesMap, tecnicosData, reassignedIds)
+  )
+}
+
 export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [ticketStatusFilter, setTicketStatusFilter] = useState<TicketStatusFilter>("en_proceso")
@@ -239,24 +267,6 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
       setSelectedNewTecnico(selectedTicket.id_tecnico)
     }
   }, [selectedTicket])
-
-  const refreshTicketsList = async (tecnicosData: Tecnico[]) => {
-    const ticketsResponse: TicketListResponse = await ticketService.getTickets()
-    const reassignedIds = getReassignedIds()
-
-    const sortedData = [...ticketsResponse.data].sort((a, b) => {
-      const dateA = new Date(a.attributes.createdAt).getTime()
-      const dateB = new Date(b.attributes.createdAt).getTime()
-      return dateB - dateA
-    })
-
-    const clientIds = sortedData.map((ticket) => ticket.attributes.id_cliente)
-    const clientesMap = await fetchClientesMap(clientIds)
-
-    return sortedData.map((ticket) =>
-      transformTicketItem(ticket, clientesMap, tecnicosData, reassignedIds)
-    )
-  }
 
   const handleUpdateStatus = async () => {
     if (!selectedTicket) return
@@ -398,12 +408,6 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
     (ticket) => matchesSearch(ticket, searchTerm) && matchesTicketStatus(ticket, ticketStatusFilter)
   )
 
-  const getStatusColor = (status: string) => {
-    return status === "En proceso"
-      ? "bg-yellow-100 text-yellow-800 border-yellow-300"
-      : "bg-green-100 text-green-800 border-green-300"
-  }
-
   const canReassign =
     selectedTicket?.estatus === "En proceso" && permissions?.canUpdateTicketStatus
 
@@ -418,7 +422,7 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-dvh bg-gray-50 flex items-center justify-center p-4">
         <Card className="w-full max-w-2xl">
           <CardContent className="p-8 text-center">
             <Loader2 className="h-12 w-12 text-blue-600 mx-auto mb-4 animate-spin" />
@@ -431,7 +435,7 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-dvh bg-gray-50 flex items-center justify-center p-4">
         <Card className="w-full max-w-2xl">
           <CardContent className="p-8 text-center">
             <FileText className="h-12 w-12 text-red-400 mx-auto mb-4" />
@@ -447,7 +451,7 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-dvh bg-gray-50 p-4">
       <div className="max-w-6xl mx-auto">
         <Card>
           <CardHeader>
@@ -743,9 +747,9 @@ export default function TicketTracker({ onStatusUpdate }: TicketTrackerProps) {
                   {selectedTicket.actualizaciones && selectedTicket.actualizaciones.length > 1 ? (
                     <div className="mt-1 p-3 bg-gray-50 rounded-md min-h-[80px]">
                       <div className="space-y-2">
-                        {selectedTicket.actualizaciones.slice(1).map((actualizacion, index) => (
+                        {selectedTicket.actualizaciones.slice(1).map((actualizacion) => (
                           <div
-                            key={actualizacion.id || index + 1}
+                            key={actualizacion.id ?? `${actualizacion.fecha}-${actualizacion.descripcion}`}
                             className="pb-2 border-b border-gray-200 last:border-0 last:pb-0"
                           >
                             <div className="text-xs text-gray-500 mb-1">

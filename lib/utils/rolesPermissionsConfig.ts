@@ -212,7 +212,3 @@ export function generateCustomRoleId(): string {
   }
   return `custom_${Date.now()}`;
 }
-
-export function getDefaultFlatPermissions(roleId: string): FlatPermissions | null {
-  return DEFAULT_SYSTEM_ROLE_PERMISSIONS[roleId] ?? null;
-}

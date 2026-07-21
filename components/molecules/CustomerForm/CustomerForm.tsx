@@ -1,6 +1,6 @@
 "use client";
 
-import { FC, useState, useCallback, useEffect, useMemo } from "react";
+import { FC, useState, useCallback, useMemo } from "react";
 import s from "./CustomerForm.module.css";
 import { Button } from "@/components/ui/button";
 import { businessApi, handleApiError } from "@/lib/api/config";
@@ -259,28 +259,6 @@ export const CustomerForm: FC<CustomerFormProps> = ({
     [dataUser]
   );
 
-  useEffect(() => {
-    if (
-      mode === "edit" &&
-      userData &&
-      Array.isArray(userData) &&
-      userData.length > 0
-    ) {
-      const userDataRaw = userData[0] as unknown as Record<
-        string,
-        string | null | undefined
-      >;
-      const sanitizedData: Record<string, string> = {};
-      Object.keys(initialUserData).forEach((key) => {
-        sanitizedData[key] = userDataRaw[key] ?? "";
-      });
-      setDataUser(sanitizedData);
-    } else {
-      setDataUser(initialUserData);
-    }
-    setErrors({});
-  }, [mode, userData, open]);
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setDataUser((prev) => ({
@@ -405,34 +383,34 @@ export const CustomerForm: FC<CustomerFormProps> = ({
   );
 
   const renderFields = (section: string) =>
-    dataInput
-      .filter((item) => item.section === section)
-      .map((item) => {
-        const fieldValue = dataUser[item.name as keyof typeof dataUser];
-        const safeValue = fieldValue ?? "";
-        return (
-          <div className="space-y-2" key={item.name}>
-            <Label htmlFor={item.name}>
-              {item.placeholder}
-              {item.required && <span className="text-red-500 ml-1">*</span>}
-            </Label>
-            <Input
-              id={item.name}
-              name={item.name}
-              placeholder={item.placeholder}
-              type={item.type}
-              value={safeValue as string}
-              onChange={handleChange}
-              className={errors[item.name] ? "border-red-500" : ""}
-              disabled={isLoading}
-              aria-invalid={Boolean(errors[item.name])}
-            />
-            {errors[item.name] && (
-              <p className="text-xs text-red-600">{errors[item.name]}</p>
-            )}
-          </div>
-        );
-      });
+    dataInput.flatMap((item) => {
+      if (item.section !== section) return [];
+
+      const fieldValue = dataUser[item.name as keyof typeof dataUser];
+      const safeValue = fieldValue ?? "";
+      return [
+        <div className="space-y-2" key={item.name}>
+          <Label htmlFor={item.name}>
+            {item.placeholder}
+            {item.required && <span className="text-red-500 ml-1">*</span>}
+          </Label>
+          <Input
+            id={item.name}
+            name={item.name}
+            placeholder={item.placeholder}
+            type={item.type}
+            value={safeValue as string}
+            onChange={handleChange}
+            className={errors[item.name] ? "border-red-500" : ""}
+            disabled={isLoading}
+            aria-invalid={Boolean(errors[item.name])}
+          />
+          {errors[item.name] && (
+            <p className="text-xs text-red-600">{errors[item.name]}</p>
+          )}
+        </div>,
+      ];
+    });
 
   return (
     <div className={s.container}>

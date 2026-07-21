@@ -57,10 +57,13 @@ export default function TicketForm({ handleSubmit, isLoading = false, initialCli
   })
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchTecnicos = async () => {
       try {
         setLoadingTecnicos(true)
         const response = await UsuariosService.obtenerTecnicos()
+        if (cancelled) return
 
         const tecnicosData = response.map((usuario) => ({
           id: usuario.id.toString(),
@@ -69,6 +72,7 @@ export default function TicketForm({ handleSubmit, isLoading = false, initialCli
 
         setTecnicos(tecnicosData)
       } catch {
+        if (cancelled) return
         setTecnicos([])
         toast({
           title: "Error al cargar técnicos",
@@ -76,11 +80,16 @@ export default function TicketForm({ handleSubmit, isLoading = false, initialCli
           variant: "destructive",
         })
       } finally {
-        setLoadingTecnicos(false)
+        if (!cancelled) {
+          setLoadingTecnicos(false)
+        }
       }
     }
 
     fetchTecnicos()
+    return () => {
+      cancelled = true
+    }
   }, [toast])
 
   useEffect(() => {
@@ -156,7 +165,7 @@ export default function TicketForm({ handleSubmit, isLoading = false, initialCli
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="min-h-dvh bg-gray-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-2xl">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center gap-2 mb-2">

@@ -60,7 +60,7 @@ const Page = () => {
         return;
       }
 
-      setSessionUser({
+      await setSessionUser({
         id: account.id,
         nombre: attributes.nombre || user,
         email: attributes.email || "",
@@ -78,7 +78,7 @@ const Page = () => {
   };
 
   return (
-    <div className='bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 w-full min-h-screen flex justify-center items-center font-normal px-4 py-8'>
+    <div className='bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 w-full min-h-dvh flex justify-center items-center font-normal px-4 py-8'>
       <div className="w-full max-w-md">
         <form
           onSubmit={(e) => login(e)}
@@ -113,7 +113,7 @@ const Page = () => {
                 placeholder='Usuario'
                 required
                 autoComplete="username"
-                className='login-input w-full h-12 pl-11 pr-4 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200'
+                className='login-input w-full h-12 pl-11 pr-4 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200'
               />
             </div>
           </div>
@@ -132,7 +132,7 @@ const Page = () => {
                 placeholder="Contraseña"
                 required
                 autoComplete="current-password"
-                className="login-input w-full h-12 pl-11 pr-11 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                className="login-input w-full h-12 pl-11 pr-11 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200"
                 toggleClassName="text-gray-400 hover:text-indigo-400 z-10"
               />
             </div>
@@ -150,7 +150,7 @@ const Page = () => {
           <button
             type="submit"
             disabled={isLoading}
-            className='bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-800 disabled:cursor-not-allowed text-white font-semibold px-4 py-3 rounded-lg w-full transition-all duration-200 shadow-lg hover:shadow-indigo-500/50 flex items-center justify-center gap-2'
+            className='bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-800 disabled:cursor-not-allowed text-white font-semibold px-4 py-3 rounded-lg w-full transition-colors duration-200 shadow-lg hover:shadow-indigo-500/50 flex items-center justify-center gap-2'
           >
             {isLoading ? (
               <>

@@ -23,6 +23,7 @@ export interface ClientSearchSelectProps {
   className?: string;
   placeholder?: string;
   variant?: "light" | "dark";
+  id?: string;
 }
 
 function formatClientLabel(client: CustomerListItem): string {
@@ -40,8 +41,11 @@ export default function ClientSearchSelect({
   className,
   placeholder = "Buscar por nombre o ID...",
   variant = "light",
+  id,
 }: ClientSearchSelectProps) {
   const isDark = variant === "dark";
+  const generatedId = useId();
+  const inputId = id ?? generatedId;
   const listboxId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
   const clientsCacheRef = useRef<CustomerListItem[] | null>(null);
@@ -221,6 +225,7 @@ export default function ClientSearchSelect({
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <Input
+            id={inputId}
             type="text"
             value={query}
             onChange={(e) => {
@@ -277,25 +282,32 @@ export default function ClientSearchSelect({
 
           {!isSearching &&
             results.map((client) => (
-              <li key={client.id} role="option" aria-selected={false}>
-                <button
-                  type="button"
-                  className={cn(
-                    "flex w-full flex-col items-start px-3 py-2 text-left text-sm focus:outline-none",
-                    isDark
-                      ? "hover:bg-gray-700 focus:bg-gray-700"
-                      : "hover:bg-blue-50 focus:bg-blue-50"
-                  )}
-                  onClick={() => handleSelect(client)}
-                >
-                  <span className={cn("font-medium", isDark ? "text-white" : "text-gray-900")}>
-                    {[client.nombre, client.apellido].filter(Boolean).join(" ") || "Sin nombre"}
-                  </span>
-                  <span className={cn("text-xs", isDark ? "text-gray-400" : "text-gray-500")}>
-                    ID: {client.id}
-                    {client.email ? ` · ${client.email}` : ""}
-                  </span>
-                </button>
+              <li
+                key={client.id}
+                role="option"
+                aria-selected={false}
+                tabIndex={0}
+                className={cn(
+                  "flex w-full cursor-pointer flex-col items-start px-3 py-2 text-left text-sm focus:outline-none",
+                  isDark
+                    ? "hover:bg-gray-700 focus:bg-gray-700"
+                    : "hover:bg-blue-50 focus:bg-blue-50"
+                )}
+                onClick={() => handleSelect(client)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    handleSelect(client);
+                  }
+                }}
+              >
+                <span className={cn("font-medium", isDark ? "text-white" : "text-gray-900")}>
+                  {[client.nombre, client.apellido].filter(Boolean).join(" ") || "Sin nombre"}
+                </span>
+                <span className={cn("text-xs", isDark ? "text-gray-400" : "text-gray-500")}>
+                  ID: {client.id}
+                  {client.email ? ` · ${client.email}` : ""}
+                </span>
               </li>
             ))}
         </ul>

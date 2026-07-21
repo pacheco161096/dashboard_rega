@@ -100,6 +100,7 @@ export const Navbar = () => {
 
       {/* Mobile Menu Button (único control de apertura/cierre en mobile) */}
       <button 
+        type="button"
         className={s.mobileMenuButton}
         onClick={toggleMobileMenu}
         aria-label={isMobileMenuOpen ? "Cerrar menú" : "Abrir menú"}
@@ -110,7 +111,12 @@ export const Navbar = () => {
 
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
-        <div className={s.mobileOverlay} onClick={closeMobileMenu}></div>
+        <button
+          type="button"
+          className={s.mobileOverlay}
+          onClick={closeMobileMenu}
+          aria-label="Cerrar menú"
+        />
       )}
 
       {/* Mobile Menu Sidebar */}

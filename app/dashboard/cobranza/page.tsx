@@ -4,7 +4,6 @@ import React, {
   useRef,
   useState,
   useCallback,
-  useMemo,
 } from "react";
 import s from "./cobranza.module.css";
 import { Gasto } from "@/types/cobranza";
@@ -73,16 +72,23 @@ function Cobranza() {
     metodo: "",
   });
 
-  // Obtener usuario logueado
-  const userLogin = sessionStorage.getItem(STORAGE_KEYS.LOGIN_USER);
-  const employee = useMemo(() => {
-    if (!userLogin) return null;
-    try {
-      return JSON.parse(userLogin);
-    } catch {
-      return null;
+  // Obtener usuario logueado (solo en cliente)
+  const [employee, setEmployee] = useState<{ id?: string | number } | null>(null);
+  const [userLogin, setUserLogin] = useState<string | null>(null);
+
+  useEffect(() => {
+    const raw = sessionStorage.getItem(STORAGE_KEYS.LOGIN_USER);
+    setUserLogin(raw);
+    if (!raw) {
+      setEmployee(null);
+      return;
     }
-  }, [userLogin]);
+    try {
+      setEmployee(JSON.parse(raw));
+    } catch {
+      setEmployee(null);
+    }
+  }, []);
 
   const userId = employee?.id?.toString() || "";
 
@@ -133,11 +139,8 @@ function Cobranza() {
   const { isLoading: isLoadingPago, procesarPago } = usePago();
 
   // Estados calculados
-  const currentDate = useMemo(() => getTodayISO(), []);
-  const total = useMemo(
-    () => totalVentas - totalGastos,
-    [totalVentas, totalGastos]
-  );
+  const currentDate = getTodayISO();
+  const total = totalVentas - totalGastos;
   const isLoading =
     isLoadingCaja || isLoadingGastos || isLoadingVentas || isLoadingPago;
 
@@ -206,7 +209,7 @@ function Cobranza() {
     setOpenVenta(false);
   }, [limpiarCarrito, limpiarCliente]);
 
-  const HandleSubmitGasto = async (e: { preventDefault: () => void }) => {
+  const handleSubmitGasto = async (e: { preventDefault: () => void }) => {
     e.preventDefault();
     if (!userId) return;
 
@@ -315,6 +318,7 @@ function Cobranza() {
       <div className={s["Cobranza-header"]}>
         <div className={s["Cobranza-cashInit"]}>
           <button
+            type="button"
             className={`${
               !isOpenCaja ? s["Cobranza-openCaja"] : s["Cobranza-closeCaja"]
             } text-sm sm:text-base whitespace-nowrap flex-shrink-0`}
@@ -325,6 +329,7 @@ function Cobranza() {
         </div>
         <div className={s["Cobranza-actions"]}>
           <button
+            type="button"
             className={`${
               isOpenCaja
                 ? s["Cobranza-buttonVenta"]
@@ -336,6 +341,7 @@ function Cobranza() {
             ✅ Nueva venta
           </button>
           <button
+            type="button"
             className={`${
               isOpenCaja
                 ? s["Cobranza-buttonGasto"]
@@ -362,7 +368,7 @@ function Cobranza() {
         <div className={s["Cobranza-container"]}>
           {/* Sección de productos */}
           <div className={s["Cobranza-products"]}>
-            <button className="border border-black rounded-lg flex flex-col items-center justify-center p-6 h-60 w-40">
+            <button type="button" className="border border-black rounded-lg flex flex-col items-center justify-center p-6 h-60 w-40">
               <span className="text-xl">➕</span>
               <span className="text-md">Crear producto</span>
             </button>
@@ -377,9 +383,9 @@ function Cobranza() {
             </div>
             <ul className={s["Cobranza-list"]}>
               {transacciones.length > 0 &&
-                transacciones.map((transaccion, index: number) => (
+                transacciones.map((transaccion) => (
                   <li
-                    key={`transaccion-${transaccion.idTransaccion}-${transaccion.idProducto}-${index}`}
+                    key={`transaccion-${transaccion.idTransaccion}-${transaccion.idProducto}`}
                   >
                     {transaccion.idTransaccion}-{transaccion.titulo} - $
                     {transaccion.total}
@@ -485,10 +491,11 @@ function Cobranza() {
                 {tab === TABS_VENTA.PAQUETE && (
                   <div className="flex flex-col mt-4">
                     <div className="mb-4">
-                      <label className="block mb-2 text-gray-300 text-sm font-medium">
+                      <label htmlFor="cobranza-buscar-cliente" className="block mb-2 text-gray-300 text-sm font-medium">
                         Buscar Cliente
                       </label>
                       <ClientSearchSelect
+                        id="cobranza-buscar-cliente"
                         value={selectedClienteId}
                         onChange={handleClienteSelectChange}
                         disabled={isLoadingCliente || isLoadingPago}
@@ -536,7 +543,7 @@ function Cobranza() {
                             <h4 className="text-sm font-medium text-gray-300 mb-2">
                               Facturas Pendientes
                             </h4>
-                            {cliente?.Facturas?.map((factura, i) => {
+                            {cliente?.Facturas?.map((factura) => {
                               const isInCart = estaEnCarrito(factura.id);
                               const statusItemCarClass = cn({
                                 "bg-rose-500": cliente.recargo,
@@ -545,7 +552,7 @@ function Cobranza() {
 
                               return (
                                 <div
-                                  key={`factura-${factura.id}-${factura.idfactura}-${i}`}
+                                  key={`factura-${factura.id}-${factura.idfactura}`}
                                   className={`${statusItemCarClass} p-3 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2`}
                                 >
                                   <div className="flex-1 min-w-0">
@@ -562,6 +569,7 @@ function Cobranza() {
                                     </span>
                                     {!isInCart && (
                                       <button
+                                        type="button"
                                         className="flex justify-center items-center cursor-pointer bg-gray-500 hover:bg-gray-700 p-2 rounded-lg transition-colors"
                                         onClick={() =>
                                           agregarItem({
@@ -640,6 +648,7 @@ function Cobranza() {
                     <div className="flex items-center gap-3">
                       <div className="flex items-center gap-2 bg-gray-700 rounded-lg">
                         <button
+                          type="button"
                           className="px-3 py-1.5 text-white hover:bg-gray-600 transition-colors rounded-l-lg"
                           onClick={() => decrementarCantidad(item.id)}
                           aria-label="Decrementar cantidad"
@@ -650,6 +659,7 @@ function Cobranza() {
                           {item?.cantidad}
                         </span>
                         <button
+                          type="button"
                           className="px-3 py-1.5 text-white hover:bg-gray-600 transition-colors rounded-r-lg"
                           onClick={() => incrementarCantidad(item.id)}
                           aria-label="Incrementar cantidad"
@@ -658,7 +668,7 @@ function Cobranza() {
                         </button>
                       </div>
                       <div className="text-white font-semibold min-w-[4rem] text-right">
-                        ${(item?.precio * item?.cantidad).toFixed(2)}
+                        ${(Number(item?.precio ?? 0) * Number(item?.cantidad ?? 0)).toFixed(2)}
                       </div>
                     </div>
                   </div>
@@ -727,6 +737,7 @@ function Cobranza() {
           )}
           <div className="mt-6 space-y-3">
             <button
+              type="button"
               className={`w-full py-3 rounded-lg font-semibold transition-colors ${
                 carrito.length === 0 ||
                 isLoading ||
@@ -773,6 +784,7 @@ function Cobranza() {
               )}
             </button>
             <button
+              type="button"
               className="w-full py-3 bg-gray-600 text-white rounded-lg font-semibold hover:bg-gray-700 transition-colors"
               onClick={() => closeDrawerVenta()}
             >
@@ -793,12 +805,13 @@ function Cobranza() {
               Nuevo Gasto
             </SheetTitle>
           </SheetHeader>
-          <form onSubmit={(e) => HandleSubmitGasto(e)} className="space-y-4">
+          <form onSubmit={(e) => handleSubmitGasto(e)} className="space-y-4">
             <div>
-              <label className="block mb-2 text-sm font-medium text-gray-700">
+              <label htmlFor="gasto-fecha" className="block mb-2 text-sm font-medium text-gray-700">
                 Fecha del gasto <span className="text-red-500">*</span>
               </label>
               <input
+                id="gasto-fecha"
                 type="date"
                 value={gastosForm.date}
                 onChange={(e) =>
@@ -809,10 +822,11 @@ function Cobranza() {
               />
             </div>
             <div>
-              <label className="block mb-2 text-sm font-medium text-gray-700">
+              <label htmlFor="gasto-categoria" className="block mb-2 text-sm font-medium text-gray-700">
                 Categoría del gasto <span className="text-red-500">*</span>
               </label>
               <select
+                id="gasto-categoria"
                 value={gastosForm.concepto}
                 onChange={(e) =>
                   setGastosForm({ ...gastosForm, concepto: e.target.value })
@@ -829,7 +843,7 @@ function Cobranza() {
               </select>
             </div>
             <div>
-              <label className="block mb-2 text-sm font-medium text-gray-700">
+              <label htmlFor="gasto-monto" className="block mb-2 text-sm font-medium text-gray-700">
                 Monto <span className="text-red-500">*</span>
               </label>
               <div className="relative">
@@ -837,6 +851,7 @@ function Cobranza() {
                   $
                 </span>
                 <input
+                  id="gasto-monto"
                   type="number"
                   step="0.01"
                   min="0"
@@ -851,10 +866,11 @@ function Cobranza() {
               </div>
             </div>
             <div>
-              <label className="block my-2 text-sm font-medium text-gray-700">
+              <label htmlFor="gasto-metodo" className="block my-2 text-sm font-medium text-gray-700">
                 Método de pago <span className="text-red-500">*</span>
               </label>
               <select
+                id="gasto-metodo"
                 value={gastosForm.metodo}
                 onChange={(e) =>
                   setGastosForm({ ...gastosForm, metodo: e.target.value })

@@ -82,11 +82,11 @@ export function useCarrito(): UseCarritoReturn {
    */
   const decrementarCantidad = useCallback((id: number) => {
     setCarrito((prevCarrito) =>
-      prevCarrito
-        .map((item) =>
-          item.id === id ? { ...item, cantidad: item.cantidad - 1 } : item
-        )
-        .filter((item) => item.cantidad > 0)
+      prevCarrito.flatMap((item) => {
+        if (item.id !== id) return [item];
+        const cantidad = item.cantidad - 1;
+        return cantidad > 0 ? [{ ...item, cantidad }] : [];
+      })
     );
   }, []);
 

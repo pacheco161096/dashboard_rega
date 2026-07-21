@@ -52,15 +52,6 @@ export const CONCEPTOS_GASTO_ARRAY: Array<{
   { value: CONCEPTOS_GASTO.OTROS, label: "Otros" },
 ];
 
-// ==================== ESTADOS DE CAJA ====================
-
-export const ESTADO_CAJA = {
-  ABIERTA: "abierta",
-  CERRADA: "cerrada",
-} as const;
-
-export type EstadoCaja = (typeof ESTADO_CAJA)[keyof typeof ESTADO_CAJA];
-
 // ==================== TABS DE VENTA ====================
 
 export const TABS_VENTA = {

@@ -132,17 +132,7 @@ export function getUserRole(): string | null {
   }
 }
 
-// Función para verificar si el usuario tiene un rol específico
-export function hasRole(role: UserRole | string): boolean {
-  const userRole = getUserRole()
-  return userRole === role
-}
 
-// Función para verificar si el usuario tiene alguno de los roles especificados
-export function hasAnyRole(...roles: Array<UserRole | string>): boolean {
-  const userRole = getUserRole()
-  return userRole !== null && roles.includes(userRole)
-}
 
 // Permisos por rol
 export const ROLE_PERMISSIONS = {

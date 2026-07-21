@@ -18,9 +18,6 @@ export const API_URLS = {
   BUSINESS:
     process.env.NEXT_PUBLIC_BUSINESS_API_URL ||
     "https://monkfish-app-2et8k.ondigitalocean.app/api",
-    MIKROTIK:
-    process.env.NEXT_PUBLIC_MIKROTIK_API_URL ||
-    "http://yg8ss8csc0kcs4c8cs00g4gw.72.60.117.117.sslip.io",
 } as const;
 
 // Configuración por defecto
@@ -171,12 +168,6 @@ export const cmsApi = createApiInstance(API_URLS.CMS);
 export const businessApi = createApiInstance(API_URLS.BUSINESS);
 
 /**
- * Instancia de axios para la API de Mikrotik
- * Usada para: mikrotik, etc.
- */
-export const mikrotikApi = createApiInstance(API_URLS.MIKROTIK);
-
-/**
  * Tipos para respuestas comunes de la API
  */
 export interface ApiResponse<T = unknown> {
@@ -201,23 +192,6 @@ export interface ApiErrorResponse {
 }
 
 /**
- * Utilidad para construir queries de filtros para Strapi
- */
-export const buildStrapiFilters = (
-  filters: Record<string, string | number | boolean | undefined>
-): string => {
-  const queryParams = new URLSearchParams();
-
-  Object.entries(filters).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== "") {
-      queryParams.append(`filters[${key}]`, String(value));
-    }
-  });
-
-  return queryParams.toString();
-};
-
-/**
  * Utilidad para construir queries de fecha para Strapi
  */
 export const buildDateRangeFilter = (
@@ -233,12 +207,4 @@ export const buildDateRangeFilter = (
  */
 export const getTodayISO = (): string => {
   return new Date().toISOString().split("T")[0];
-};
-
-/**
- * Utilidad para formatear fechas para queries de Strapi
- */
-export const formatDateForStrapi = (date: string | Date): string => {
-  const dateObj = typeof date === "string" ? new Date(date) : date;
-  return dateObj.toISOString();
 };
